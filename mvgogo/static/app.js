@@ -25,6 +25,10 @@ function el(tag, text, className) {
   return node;
 }
 const minutes = seconds => Math.ceil(seconds / 60);
+const durationText = seconds => {
+  const total = Math.max(0, Math.round(seconds)), m = Math.floor(total / 60), s = total % 60;
+  return m ? `${m} мин${s ? ` ${s} с` : ''}` : `${s} с`;
+};
 const time = timestamp => new Intl.DateTimeFormat('ru', {
   hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin'
 }).format(timestamp);
@@ -369,11 +373,11 @@ function renderRoutes(data) {
     const timeline = el('ol', undefined, 'timeline');
     route.legs.forEach((leg,index) => {
       const row = el('li'), connection = route.connections?.find(c => c.before_leg_index === index);
-      if (connection) row.append(el('div', `Пересадка: ${time(connection.alight_time)} → ${time(connection.board_time)} · переход ${minutes(connection.walk_seconds)} мин + ожидание ${minutes(connection.wait_seconds)} мин`, 'connection-note'));
-      if (leg.wait_before_seconds > 0) row.append(el('div', `${time(leg.startTime-leg.wait_before_seconds*1000)}–${time(leg.startTime)} · ожидание ${minutes(leg.wait_before_seconds)} мин${leg.transitLeg ? ` · ${modeName(leg)}` : ''}`, 'wait-row'));
+      if (connection) row.append(el('div', `Пересадка: ${time(connection.alight_time)} → ${time(connection.board_time)} · переход ${durationText(connection.walk_seconds)} + ожидание ${durationText(connection.wait_seconds)}`, 'connection-note'));
+      if (leg.wait_before_seconds > 0) row.append(el('div', `${time(leg.startTime-leg.wait_before_seconds*1000)}–${time(leg.startTime)} · ожидание ${durationText(leg.wait_before_seconds)}${leg.transitLeg ? ` · ${modeName(leg)}` : ''}`, 'wait-row'));
       const step = el('button', undefined, 'step-button'); step.type = 'button'; step.style.setProperty('--leg-color', colors[index]);
       const number = el('span', String(index+1), 'step-number'), body = el('span', undefined, 'step-body');
-      body.append(el('strong', `${modeName(leg)} · ${minutes(leg.duration)} мин`));
+      body.append(el('strong', `${modeName(leg)} · ${leg.duration < 60 ? durationText(leg.duration) : `${minutes(leg.duration)} мин`}`));
       body.append(el('span', `${time(leg.startTime)} ${placeName(leg.from.name) || 'A'} → ${time(leg.endTime)} ${placeName(leg.to.name) || 'B'}`, 'step-places'));
       if (leg.transitLeg && leg.headsign) body.append(el('span', `В сторону ${leg.headsign}`, 'step-direction'));
       if (leg.rentedBike) body.append(el('span', 'Взять велосипед → вернуть на станции', 'step-direction'));
