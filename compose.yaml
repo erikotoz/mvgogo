@@ -1,0 +1,34 @@
+services:
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      OTP_URL: http://otp:8080/otp/gtfs/v1
+      DATA_DIR: /app/data/cache
+      SOURCE_MANIFEST: /app/otp-data/sources.json
+    volumes:
+      - station-cache:/app/data/cache
+      - ./data/otp:/app/otp-data:ro
+    restart: unless-stopped
+    mem_limit: 512m
+  otp:
+    image: opentripplanner/opentripplanner:2.8.1
+    command: ["--load", "--serve"]
+    environment:
+      JAVA_TOOL_OPTIONS: -Xmx4G
+    volumes:
+      - ./data/otp:/var/opentripplanner
+    mem_limit: 6g
+    restart: unless-stopped
+  graph:
+    image: opentripplanner/opentripplanner:2.8.1
+    profiles: [build]
+    command: ["--build", "--save"]
+    environment:
+      JAVA_TOOL_OPTIONS: -Xmx8G
+    volumes:
+      - ./data/otp:/var/opentripplanner
+    mem_limit: 12g
+volumes:
+  station-cache:

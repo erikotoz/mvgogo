@@ -1,0 +1,18 @@
+query Plan($from: PlanLabeledLocationInput!, $to: PlanLabeledLocationInput!, $departure: OffsetDateTime!, $modes: PlanModesInput!) {
+  planConnection(origin: $from, destination: $to,
+    dateTime: {earliestDeparture: $departure},
+    modes: $modes, first: 5, searchWindow: "1h",
+    preferences: {street: {bicycle: {rental: {allowedNetworks: ["nextbike_ml"]}}}}) {
+    routingErrors { code description }
+    edges { node {
+      startTime endTime
+      legs {
+        mode transitLeg rentedBike duration distance startTime endTime
+        route { gtfsId shortName longName color }
+        from { name lat lon vehicleRentalStation { stationId name } }
+        to { name lat lon vehicleRentalStation { stationId name } }
+        legGeometry { points }
+      }
+    } }
+  }
+}

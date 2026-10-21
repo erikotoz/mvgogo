@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#163e35">
+  <title>mvgogo — транспорт + велосипед</title>
+  <link rel="stylesheet" href="/static/vendor/leaflet.css">
+  <link rel="stylesheet" href="/static/style.css">
+  <script defer src="/static/vendor/leaflet.js"></script>
+  <script defer src="/static/app.js"></script>
+</head>
+<body>
+  <aside class="panel">
+    <header><a class="wordmark" href="/">mvgo<span>go</span><i>↗</i></a><span class="city">MÜNCHEN</span></header>
+    <div class="intro"><span class="eyebrow">МЕНЬШЕ ПЕРЕСАДОК. БОЛЬШЕ ГОРОДА.</span><h1>А дальше —<br>на велосипеде.</h1><p>Сравни общественный транспорт с поездкой через станции MyRadl.</p></div>
+    <form id="trip-form">
+      <div class="point-field"><button type="button" class="point-button active" id="pick-origin" aria-label="Выбрать отправление на карте">A</button><label for="origin">Откуда<input id="origin" placeholder="Нажми на карту или введи lat, lon" required autocomplete="off"></label></div>
+      <div class="point-field"><button type="button" class="point-button" id="pick-destination" aria-label="Выбрать назначение на карте">B</button><label for="destination">Куда<input id="destination" placeholder="Нажми на карту или введи lat, lon" required autocomplete="off"></label></div>
+      <div class="shortcuts"><button type="button" id="locate">⌖ Моё положение</button><button type="button" id="example">Пример поездки</button><button type="button" id="swap" aria-label="Поменять точки местами">A ⇄ B</button></div>
+      <label class="departure" for="departure">Отправление · время устройства<input type="datetime-local" id="departure" required></label>
+      <details class="preferences"><summary>Настроить поездку</summary><label for="max-walk">Пешком за всю поездку, мин<input type="number" id="max-walk" min="1" max="60" value="30"></label><label for="max-bike">На велосипеде за всю поездку, мин<input type="number" id="max-bike" min="1" max="120" value="30"></label></details>
+      <button class="submit" id="submit" type="submit">Найти маршрут <span>↗</span></button>
+    </form>
+    <p id="message" role="status">Выбери точку A на карте. Станции можно открыть нажатием.</p>
+    <section id="results" aria-label="Варианты поездки"></section>
+    <footer>Расписания: Münchner Verkehrs- und Tarifverbund GmbH (MVV). <span id="mvv-date"></span> Станции: MyRadl / nextbike.<br>Аренда и проверка велосипеда — в приложении оператора.</footer>
+  </aside>
+  <main class="map-panel">
+    <div id="map" aria-label="Карта Мюнхена со станциями MyRadl"></div>
+    <div class="map-heading"><span class="live-dot"></span><div><strong>MyRadl рядом</strong><span id="feed-status" role="status">Загружаем станции…</span></div><button id="refresh" type="button" aria-label="Обновить станции">↻</button></div>
+    <div class="map-legend"><span><i class="available"></i> Есть велосипеды</span><span><i class="empty"></i> Пусто / закрыто</span><span><i class="unknown"></i> Проверить вручную</span></div>
+    <div class="map-hint" id="map-hint">Нажми на карту, чтобы выбрать отправление A</div>
+  </main>
+</body>
+</html>

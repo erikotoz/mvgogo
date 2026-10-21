@@ -1,0 +1,5 @@
+{
+  "osmDefaults": { "osmTagMapping": "germany", "timeZone": "Europe/Berlin" },
+  "transitServiceStart": "-P1W",
+  "transitServiceEnd": "P8W"
+}
