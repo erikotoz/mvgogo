@@ -1,50 +1,77 @@
-# Сервер и ресурсы
+# Hosting and resources
 
-## Предварительный выбор
+## Starting configuration
 
-Для личного прототипа с собственным маршрутизатором разумная стартовая конфигурация — **2–4 vCPU, 8 ГБ RAM, 20 ГБ SSD**, Linux, без GPU. Это оценка, а не измеренная минимальная конфигурация для любого хоста. Сначала проверь задержки и память на собственных типичных поездках.
+For personal use with the current Munich routing graph, start with **2–4 vCPU,
+8 GB RAM and 20 GB SSD**, on Linux. No GPU is needed. This is an estimate, not a
+measured minimum for every provider.
 
-| Сценарий | Стартовая конфигурация | Примечание |
-|---|---|---|
-| Только карта станций | 1 vCPU, 512 МБ–1 ГБ RAM | Без OTP и расчёта маршрутов |
-| Собственный OTP для личного использования | 2–4 vCPU, 8 ГБ RAM | 4 ГБ heap для OTP, запас ОС и native memory |
-| Несколько одновременных пользователей | 4 vCPU, 8–16 ГБ RAM | Требуется нагрузочная проверка и лимит запросов |
-| Сборка графа на отдельной машине | 4+ vCPU, 12–16 ГБ RAM | Начальная настройка JVM: `-Xmx8G` |
+| Workload | Starting point | Notes |
+| --- | --- | --- |
+| Station map only | 1 vCPU, 512 MB–1 GB RAM | No OTP or route calculation |
+| Personal use with OTP | 2–4 vCPU, 8 GB RAM | 4 GB OTP heap, plus native memory and OS headroom |
+| Several concurrent users | 4 vCPU, 8–16 GB RAM | Requires load testing and request limits |
+| Graph building on a separate machine | 4+ vCPU, 12–16 GB RAM | Initial Java heap setting: `-Xmx8G` |
 
-Размер графа на диске существенно меньше расхода RAM. JVM `-Xmx4G` ограничивает только heap, а не всю память процесса. Compose оставляет OTP 6 ГБ памяти контейнера и приложению 512 МБ; остальное нужно операционной системе и её файловому кэшу. Не ставь лимит контейнера равным размеру heap.
+A small graph file does not imply low RAM use. `-Xmx4G` limits only the Java heap,
+not the process's total memory. Compose allows 6 GB for OTP and 512 MB for the web
+container, leaving the rest for the OS and filesystem cache on an 8 GB host. Do not
+set the container memory limit equal to its heap size.
 
-OTP хранит граф в памяти; объём зависит от размера территории, плотности улиц, периода расписания и данных высот. Более крупная территория может потребовать существенно больше памяти. Производительность одного ядра влияет на задержку отдельного запроса, дополнительные ядра — на одновременные запросы. [Официальные требования OTP](https://docs.opentripplanner.org/en/v2.8.1/System-Requirements/).
+Graph memory depends on the street area, network density, schedule window and
+elevation data. Single-core speed affects individual search latency; additional
+cores help concurrent requests. Shared vCPU performance varies by host.
+See [OTP system requirements](https://docs.opentripplanner.org/en/v2.8.1/System-Requirements/).
 
-## Сборка отдельно от рабочего сервера
+## Build separately, serve continuously
 
-Граф можно собрать на ноутбуке или временной машине и перенести `data/otp/` на рабочий сервер. Сохраняй ту же версию OTP и конфигурации. Для запуска нужен готовый `graph.obj`; загруженные OSM/GTFS нужны для последующей пересборки, а не для каждого запроса. Это позволяет не оплачивать большой сервер постоянно. [Сборка и загрузка графа](https://docs.opentripplanner.org/en/v2.8.1/Basic-Tutorial/).
+Build the graph on a laptop or temporary larger machine and upload it to the
+serving host. Keep the OTP version and configuration consistent. Serving needs the
+finished `graph.obj`; OSM/GTFS downloads are needed for rebuilding, not each request.
+See [OTP build and load workflow](https://docs.opentripplanner.org/en/v2.8.1/Basic-Tutorial/).
 
-Обновления расписания требуют пересборки; обновления количества велосипедов — нет. Увеличивать сервер только из-за количества записей о велосипедах не нужно: несколько сотен станций — небольшой JSON.
+Schedule updates require a rebuild. Bike availability updates do not. Hundreds
+of station records are a small JSON workload and do not justify a larger server
+on their own.
 
-## Что измерять
+## Local measurements — 21 October 2026
 
-- RSS процесса OTP после загрузки и после серии запросов;
-- размер heap после сборки мусора, паузы GC и число ошибок памяти;
-- время первого запроса, медиану и p95 после прогрева;
-- поведение при двух и четырёх одновременных расчётах;
-- размер и срок действия входного GTFS, размер готового графа;
-- пиковую память и длительность пересборки отдельно от работы сервиса.
+Test machine: 48 GB RAM, 14 processors available to Java, OTP 2.8.1 JAR.
 
-## Локальная проверка 21 октября 2026
+| Measurement | Observation |
+| --- | --- |
+| Input data | 135.4 MB OSM + 17.9 MB MVV GTFS |
+| Graph | 848,915 vertices; 2,111,188 edges; 18,861 transit stops |
+| Build with `-Xmx8G` | 1 min 41 sec, plus about 4 sec to save |
+| Saved graph | 228.2 MB, approximately 218 MiB |
+| OTP RSS after initial queries, with `-Xmx4G` | About 2.36 GiB |
+| Heap used at that observation | About 1.56 GiB |
+| Five sequential warmed route comparisons | About 0.44–0.61 sec each, including four OTP searches |
 
-На компьютере с 48 ГБ RAM и 14 доступными Java процессорами, с JAR OTP 2.8.1:
+This was a short smoke test on a powerful laptop. It is not a VPS load test or a
+peak-memory measurement. Departure time, candidate routes, bike availability and
+hardware affect results. An observed time saving on one trip is not a general
+performance or routing claim.
 
-- Входы: OSM 135,4 МБ, MVV GTFS 17,9 МБ.
-- Граф: 848 915 вершин, 2 111 188 рёбер, 18 861 транспортная остановка.
-- Сборка с `-Xmx8G`: 1 минута 41 секунда плюс примерно 4 секунды на сохранение.
-- Сохранённый граф: 228,2 МБ (около 218 МиБ).
-- RSS OTP с `-Xmx4G` после первых запросов: около 2,36 ГиБ; использованный heap в тот момент — около 1,56 ГиБ.
-- Пять последовательных сравнений публичных городских маршрутов: примерно 0,44–0,61 секунды каждое после прогрева, включая четыре внутренних запроса к OTP.
+## Before public deployment
 
-Это короткая проверка на мощном ноутбуке, не нагрузочный тест VPS и не измерение пикового расхода RAM. Время меняется вместе с отправлением, набором вариантов, доступностью велосипедов и железом. На одном из запросов Münchner Freiheit → Westpark смешанный маршрут экономил около 5,5 минут по сравнению с найденным обычным транспортом. Это наблюдение конкретного расчёта, а не постоянная характеристика поездки.
+- Put FastAPI behind an HTTPS reverse proxy. Keep OTP private.
+- Limit expensive `/api/routes` requests, concurrency and queue length.
+- Preserve the station cache directory on persistent storage.
+- Choose map tile and geocoding services appropriate to the expected public load.
+  Respect the [OSM tile policy](https://operations.osmfoundation.org/policies/tiles/)
+  and [Photon demo terms](https://github.com/komoot/photon#demo-server).
+- Rotate logs and avoid retaining personal addresses in access logs unnecessarily.
+- Schedule GTFS/OSM refreshes and rebuild before the graph's service period expires.
+- Test the actual Docker deployment; local verification used Uvicorn and the JAR.
 
-Дешёвый VPS с небольшим числом быстрых ядер и достаточной памятью подходит лучше serverless-функций с холодным стартом: OTP — постоянно работающий Java-процесс с загруженным графом. Собственный сервер тайлов, GPU и ML-модель для этого прототипа не нужны.
+A persistent VPS suits OTP's loaded graph better than short-lived functions with
+cold starts. A domain and HTTPS make the browser app reachable from a phone;
+installation as a PWA is still a planned feature.
 
-## Перед внешним доступом
+## What to measure on the host
 
-Публикуй FastAPI через HTTPS reverse proxy. Оставь порт OTP закрытым, ограничь частоту/параллельность дорогих запросов и размер очереди на прокси. Храни кэш станций на постоянном диске. Для публичной нагрузки выбери поставщика тайлов вместо расчёта на бесплатный сервер стандартных тайлов OSM. Конкретный хостинг и платный тариф пока не выбраны.
+Check OTP RSS after loading and repeated queries, heap/GC behaviour, first-request
+latency and warmed median/p95 latency. Test two and four simultaneous route
+comparisons, then choose request limits based on those results. Measure rebuild
+peak memory separately from normal serving.

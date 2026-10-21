@@ -1,51 +1,74 @@
-# Источники данных
+# Data sources
 
-Проверка источников: 21 октября 2026 года.
+Source inspection date: **21 October 2026**. Snapshot counts and feed dates below
+record that inspection; they are not live status claims.
 
 ## MyRadl / nextbike
 
-Auto-discovery: <https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_ml/gbfs.json>.
+[GBFS auto-discovery](https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_ml/gbfs.json)
+provides public GBFS 2.3 feeds, including `station_information`, `station_status`,
+`free_bike_status` and `vehicle_types`. The inspected snapshot contained 805 stations
+and 4,969 bike records, with a 60-second TTL. Counts change over time. The feed's
+`system_information` reported CC0-1.0.
 
-Публичный ответ GBFS 2.3 содержит `station_information`, `station_status`, `free_bike_status`, `vehicle_types` и другие фиды. В проверенном снимке было 805 станций и 4 969 записей о велосипедах, TTL — 60 секунд. Эти количества меняются. Лицензия из `system_information`: CC0-1.0.
+Station information includes coordinates, names, operator links and virtual parking
+area geometry in `station_area`. Station status contains available bikes by type
+and pickup/return flags. Vehicle types distinguish conventional and electric bikes.
+The app does not assume per-bike battery data is available.
 
-`station_information` содержит координаты, название, ссылки оператора и для виртуальных станций геометрию `station_area`. `station_status` содержит количество доступных велосипедов по типам и признаки открытой аренды/возврата. `vehicle_types` описывает обычные и электрические велосипеды. Данные о заряде каждого велосипеда для проекта не предполагаются.
+`free_bike_status` exists, but coordinates do not establish continuous GPS tracking.
+A bike record can refer to its station and use station coordinates. The prototype
+uses station availability and does not promise precise tracking of every bicycle.
 
-`free_bike_status` действительно доступен, но наличие координат не означает непрерывное GPS-отслеживание. Запись может быть привязана к станции и использовать её координаты. Этот прототип использует доступность станций, не обещая точное положение всех велосипедов.
-
-Обновление примерно раз в минуту — свойство наблюдаемого фида, не гарантия доступности сервиса. При ошибке сохраняются места станций; старые количества не показываются как актуальные.
-
-Документация оператора: <https://github.com/nextbike/api-doc>.
+Updates about once per minute are observed feed behaviour, not an uptime guarantee.
+On failure, cached locations remain visible and old counts become unknown.
+See [nextbike API documentation](https://github.com/nextbike/api-doc).
 
 ## MVV
 
-Официальная страница: <https://www.mvv-muenchen.de/en/service-support/mvv-content-for-developers/>.
+[Official developer information](https://www.mvv-muenchen.de/en/service-support/mvv-content-for-developers/)
+provides the [complete GTFS archive](https://www.mvv-muenchen.de/fileadmin/mediapool/developer/opendata/gesamt_gtfs.zip).
+The downloaded archive reported `feed_version=20261005`, valid from 1 October to
+13 December 2026. It includes regional rail, S-Bahn, U-Bahn, trams and buses.
 
-Полный GTFS: <https://www.mvv-muenchen.de/fileadmin/mediapool/developer/opendata/gesamt_gtfs.zip>.
+These are planned schedules (Soll-Fahrplandaten). The archive does not provide
+live delays, cancellations or guaranteed connections.
 
-В загруженном архиве `feed_version=20261005`, период `2026-10-01` — `2026-12-13`. Включены региональные поезда, S-Bahn, метро, трамваи и автобусы. Это Soll-Fahrplandaten — плановое расписание. Публичный GTFS сам по себе не предоставляет задержки, отмены или гарантированные пересадки.
-
-MVV указывает лицензию CC BY и требует указывать «Münchner Verkehrs- und Tarifverbund GmbH (MVV)» и дату получения. Скрипт сохраняет дату/URL/контрольную сумму в `data/otp/sources.json`; они должны сопровождать конкретное развёртывание. На официальной странице доступ к системе онлайн-маршрутизации всё ещё обозначен как closed beta.
+MVV specifies CC BY and requires attribution to **Münchner Verkehrs- und Tarifverbund
+GmbH (MVV)** and the retrieval date. Preparation records the date, source URL and
+checksum in `data/otp/sources.json`. Keep that manifest with the deployment; the
+interface displays its MVV retrieval date.
 
 ## OpenStreetMap
 
-Городская выгрузка: <https://download.bbbike.org/osm/bbbike/Muenchen/>.
+Street data comes from the [BBBike Munich extract](https://download.bbbike.org/osm/bbbike/Muenchen/),
+using `Muenchen.osm.pbf`, approximately 129 MiB at inspection. Its boundary is smaller
+than the full MVV region. Walking/cycling coverage therefore focuses on Munich and
+nearby suburbs.
 
-Используется `Muenchen.osm.pbf`, около 129 МиБ на момент проверки. Границы этой выгрузки меньше всего региона MVV. Это ограничивает пригодность пеших/велосипедных участков за пределами города и ближайших пригородов.
-
-Данные OSM распространяются по ODbL: <https://www.openstreetmap.org/copyright>. На карте сохраняется атрибуция. Для небольшого локального прототипа используются стандартные тайлы OSM согласно <https://operations.osmfoundation.org/policies/tiles/>; массовое публичное использование требует отдельного решения по тайлам.
+OSM data is © OpenStreetMap contributors under the
+[ODbL](https://www.openstreetmap.org/copyright). Map attribution is retained.
+Standard OSM tiles are used for modest manual prototyping under the
+[tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
+Public scaling, prefetching or offline tiles need a suitable separate arrangement.
 
 ## OpenTripPlanner
 
-Зафиксированная версия: 2.8.1. JAR загружается из Maven Central с проверкой SHA-256. Документация:
+Version **2.8.1** is pinned. Preparation downloads the JAR from Maven Central and
+verifies SHA-256. OTP runs as a separate service under its own license; see
+[Third-party notices](../THIRD_PARTY_NOTICES.md).
 
-- <https://docs.opentripplanner.org/en/v2.8.1/Basic-Tutorial/>
-- <https://docs.opentripplanner.org/en/v2.8.1/GBFS-Config/>
-- <https://docs.opentripplanner.org/en/v2.8.1/System-Requirements/>
+- [Build and load tutorial](https://docs.opentripplanner.org/en/v2.8.1/Basic-Tutorial/)
+- [GBFS configuration](https://docs.opentripplanner.org/en/v2.8.1/GBFS-Config/)
+- [System requirements](https://docs.opentripplanner.org/en/v2.8.1/System-Requirements/)
 
-## Google
+## Photon place search
 
-Google API в прототип не включён: он не нужен для OSM/GTFS/GBFS и требует отдельного рассмотрения тарификации и условий отображения результатов. В частности, для новых проектов с платёжным адресом в ЕЭЗ существуют ограничения использования описаний/шагов Routes API вместе с картами: <https://developers.google.com/maps/comms/eea/routes>.
+The prototype uses the public [Photon API](https://photon.komoot.io/api/) with
+OpenStreetMap data. See the [API documentation](https://github.com/komoot/photon/blob/master/docs/api-v1.md)
+and [demo server terms](https://github.com/komoot/photon#demo-server).
 
-## Photon: поиск мест и адресов
-
-Для личного прототипа используется <https://photon.komoot.io/api/> с данными OpenStreetMap. Документация API: <https://github.com/komoot/photon/blob/master/docs/api-v1.md>. Demo допускает разумное число запросов без гарантий доступности; при большой нагрузке возможна блокировка, поэтому запросы ограничены, кэшируются, а провайдер заменяется через `GEOCODER_URL`. Поиск ограничен районом Мюнхена и запускается явно пользователем.
+The demo permits reasonable usage without an availability guarantee; high volume
+can be blocked. Requests are explicit, throttled and cached, and search is bounded
+to Munich. Change `GEOCODER_URL` to use a compatible provider for larger deployments.
+Search queries are transmitted to that provider.

@@ -1,115 +1,191 @@
-# mvgogo
+<div align="center">
 
-Прототип маршрутизатора для Мюнхена: общественный транспорт + прокатные велосипеды MyRadl.
+<img src="docs/assets/banner.svg" alt="mvgogo — Transit meets bike sharing. Your route. Your rules." width="100%">
 
-На карте видны станции, количество велосипедов и типы, разрешён ли возврат, а также время обновления данных. Найди адрес или место по названию, выбери точки на карте либо введи координаты `lat, lon`. Метки «Дом» и «Работа» сохраняются в браузере и доступны под каждым полем. Приложение сравнит обычную поездку с вариантами через прокатные велосипеды и покажет участки на карте. Кнопка «Пример поездки» заполняет две публичные точки в городе.
+# A better connection through Munich.
 
-## Возможности и границы
+**Compare public transport with MyRadl bike sharing.**<br>
+Find the station, understand the transfer, and see what a different route could save.
 
-- Настоящие станции и доступность из публичного GBFS MyRadl; аккаунт и ключ не требуются.
-- Запасной режим: сохранённые станции остаются на карте при недоступности API. Неизвестное или устаревшее наличие отображается как `?`, а не как ноль.
-- OpenTripPlanner 2.8.1 рассчитывает ходьбу, транспорт, прокат до/после транспорта и прямую велопоездку. Велосипед между двумя поездками на транспорте пока не поддержан.
-- Результаты сортируются по времени прибытия от выбранного отправления, включая ожидание. Учитываются 90 секунд на аренду и 45 секунд на возврат.
-- Лимиты суммарной ходьбы и проката применяются к найденным вариантам. Это фильтрация результатов, а не гарантия нахождения всех вариантов в заданных ограничениях.
-- Расписание MVV плановое: актуальные задержки и отмены не подключены.
-- Наличие велосипеда сейчас не гарантирует наличие при прибытии. Резервирование и оплата остаются в приложении оператора.
-- Стоимость, льготы и прогноз наличия пока не рассчитываются.
-- При отдалении станции объединяются в группы; числа в группах означают число станций. При обзоре карты станции заметные, а при выборе станции, расчёте или просмотре маршрута фоновые станции приглушаются. Флажок «Все станции» позволяет скрыть их полностью.
-- Шаги маршрута имеют номера и цвета на карте. Нажатие на шаг выделяет его. Для пересадок показаны время выхода, переход и ожидание следующего рейса.
+[![Checks](https://github.com/erikotoz/mvgogo/actions/workflows/checks.yml/badge.svg)](https://github.com/erikotoz/mvgogo/actions/workflows/checks.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-237451?style=flat-square)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-237451?style=flat-square)](pyproject.toml)
+[![Status: prototype](https://img.shields.io/badge/status-prototype-d2f375?style=flat-square&labelColor=163e35)](#project-status)
 
-## Стек
+[Get started](#get-started) · [Screenshots](#see-it-in-action) · [How it works](#how-it-works) · [Roadmap](#roadmap) · [Contribute](CONTRIBUTING.md)
 
-Python 3.10+, FastAPI, httpx, Uvicorn; JavaScript и Leaflet 1.9.4; Java 21+ и OpenTripPlanner 2.8.1; MVV GTFS + OpenStreetMap + MyRadl GBFS. Зависимости Python закреплены в `uv.lock`, движок — версией и SHA-256. База данных, Node.js и API Google не нужны. Для одинакового окружения рекомендуется Python 3.13 и Java 21.
+</div>
 
-## Локальный запуск
+## One trip. More ways to get there.
 
-Установи [uv](https://docs.astral.sh/uv/getting-started/installation/) и Java 21+. Команды выполняются из корня репозитория.
+Sometimes the best connection is a bus ride followed by a bike, instead of another
+transfer. mvgogo explores those options using Munich's public transport schedules,
+OpenStreetMap streets and current MyRadl station availability.
+
+Search for a place, pick a departure time, and compare transit, cycling and mixed
+routes in one map. No account or API key is required for local use.
+
+## See it in action
+
+![Munich trip planner with a selected transit and bike-sharing route](docs/assets/route-desktop.png)
+
+<p align="center"><em>Münchner Freiheit → Westpark: numbered legs connect the itinerary to the map.</em></p>
+
+| Plan your trip | Explore a station |
+| :---: | :---: |
+| <img src="docs/assets/mobile-plan.jpg" alt="Mobile trip planner with address search and Home and Work shortcuts" width="320"> | <img src="docs/assets/mobile-station.jpg" alt="Mobile station card with bike availability and pickup and return information" width="320"> |
+
+Screenshots show actual application output captured on 21 October 2026. Routes,
+station counts and availability are examples from that session and will change.
+Map imagery: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright).
+
+## Built for the whole connection
+
+| Feature | What you get |
+| --- | --- |
+| **Transit + bike comparison** | Transit-only, bike-only and rental before or after transit, ranked by arrival time. |
+| **Transfers you can understand** | Scheduled boarding times, walking between services and waiting shown separately. |
+| **Current station availability** | Bike counts, vehicle types, return status and source timestamps from public GBFS. |
+| **A map that stays readable** | Station clusters while browsing; background stations fade when a route or station is selected. |
+| **Places, not just coordinates** | Address and landmark search, map selection and browser-local Home/Work shortcuts. |
+| **A phone-friendly layout** | Dedicated Plan and Map views, readable station cards and numbered route steps. |
+| **Honest fallback behaviour** | Cached station locations remain visible during outages; stale availability becomes unknown. |
+
+## Get started
+
+**Just want to explore stations?** Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+and run:
 
 ```sh
+git clone https://github.com/erikotoz/mvgogo.git
+cd mvgogo
 make install
+make dev
+```
+
+Open **[localhost:8000](http://localhost:8000)**. The map and station availability
+work independently of the routing engine.
+
+**Want route comparisons too?** Install Java 21+ and prepare the routing graph:
+
+```sh
 make prepare
 make graph
 ```
 
-Первая загрузка — примерно 320 МБ: движок, улицы и расписание. Сборка графа запускает JVM с лимитом heap 8 ГБ; закрой ненужные приложения или собирай на отдельной машине. Heap настраивается: `make graph BUILD_HEAP=6G`.
-
-Запусти в двух терминалах:
+Then keep the routing engine running in another terminal:
 
 ```sh
 make router
 ```
 
-```sh
-make dev
+Leave `make dev` running and choose **Try an example → Find a route** in the app.
+The first preparation downloads roughly 320 MB; graph building defaults to an
+8 GB Java heap and needs additional system memory. Allow about a minute after
+starting OTP for its first station update.
+
+See [Getting started](docs/getting-started.md) for Docker Compose, configuration,
+data refreshes and troubleshooting.
+
+## How it works
+
+```mermaid
+flowchart LR
+    Browser["Browser · Leaflet"] <--> API["FastAPI"]
+    API <--> OTP["OpenTripPlanner 2.8.1"]
+    API <--> GBFS["MyRadl · GBFS"]
+    API <--> Photon["Photon · Place search"]
+    OTP <--> GBFS
+    GTFS["MVV · GTFS schedules"] --> Graph["Routing graph"]
+    OSM["OpenStreetMap streets"] --> Graph
+    Graph --> OTP
 ```
 
-Открой [localhost:8000](http://localhost:8000). Дождись первой загрузки станций в OTP, обычно до минуты после запуска. Только карту станций можно запустить командой `make dev`, без Java, загрузки улиц и сборки графа. При отсутствии маршрутизатора приложение явно сообщает об этом.
+Python, FastAPI and httpx serve the API. Plain JavaScript, Leaflet and a locally
+hosted Manrope font power the interface. OpenTripPlanner combines GTFS, OSM and
+GBFS for routing. Python dependencies are locked; the OTP download is pinned and
+verified with SHA-256. No frontend build step or database is required.
 
-Дополнительная проверка публичных данных:
+The app compares four search scenarios, removes duplicates, checks rental stations
+and filters results against walking/cycling limits. Transfer waits follow the
+schedule. A two-minute transfer allowance, 90-second pickup allowance and
+45-second return allowance are configured inside the routing engine.
 
-```sh
-.venv/bin/python scripts/probe.py
-make test
-make check
-```
+[Architecture and search behaviour →](docs/architecture.md)
 
-### Настройки
+## Hosting
 
-Переменные окружения описаны в `.env.example`. Приложение читает окружение процесса; `.env` автоматически не загружается. Например:
+A useful starting point for personal use is **2–4 vCPU · 8 GB RAM · 20 GB SSD**,
+with Linux and no GPU. Graph building needs roughly **12–16 GB RAM** and can run on
+a separate computer; upload the finished graph to the server afterwards.
 
-```sh
-OTP_URL=http://127.0.0.1:8080/otp/gtfs/v1 make dev
-```
+A local smoke test used about **2.36 GiB RSS** for OTP after initial queries. Five
+warmed route comparisons took **0.44–0.61 seconds** each on a powerful laptop.
+These are observations, not VPS capacity or latency guarantees.
 
-`AVAILABILITY_MAX_AGE=180` задаёт предельный возраст статуса в секундах. Кэш станций находится в `data/cache/stations.json`. Чтобы запасной режим работал после перезапуска сервера, сохраняй этот каталог на постоянном диске.
+The repository includes Docker Compose. Public hosting also needs HTTPS, request
+limits and suitable map tile/geocoding providers. The project has no hosted public
+demo at present.
 
-## На телефоне
+[Deployment notes and measurements →](docs/hosting.md)
 
-На экранах до 820 пикселей форма и карта переключаются нижними кнопками «Маршрут / Карта». Каждая занимает доступную площадь экрана; состояние поездки сохраняется при переключении. Карточка станции открывается снизу, а «Отсюда / Сюда» возвращает к форме. После расчёта показываются варианты поездки; «Весь маршрут на карте» и шаги маршрута переключают к карте. Учтены safe area, динамическая высота экрана и предпочтение уменьшенного движения.
+## Project status
 
-Основные поля ввода имеют размер шрифта 16 пикселей, действия — увеличенные области нажатия. Шрифт Manrope с кириллицей хранится в проекте, внешних запросов за шрифтом нет. Мобильная вёрстка вручную проверена в браузерных областях 360×640 и 390×640, включая выбор станции и расчёт поездки; отдельная проверка на физических iOS/Android устройствах пока не проводилась.
+**Working prototype, focused on Munich and nearby suburbs.** The following limits
+matter when reading a result:
 
-## Адреса и сохранённые места
+- **Scheduled transit only.** Live delays and cancellations are not connected.
+- **Bikes before or after transit.** A bike ride between two transit journeys is
+  not supported yet.
+- **Availability is a snapshot.** A bike may be taken before you arrive. Check,
+  reserve and pay in the operator's app.
+- **Search is bounded.** Results are not an exhaustive search or a guarantee of
+  the globally fastest route. Walking/cycling limits filter returned candidates.
+- **Browser app today.** Mobile layouts have been checked in browser viewports;
+  physical Android/iOS testing, PWA installation and offline routing are pending.
 
-Поиск запускается кнопкой «Найти» или Enter, без запросов при каждом вводимом символе. Выбери один из найденных результатов. Поддерживается район Мюнхена и ближайших пригородов. Photon использует данные OpenStreetMap; точность адресов зависит от их покрытия. Текст запроса передаётся сервису Photon.
+## Roadmap
 
-Под каждым полем доступны «Дом», «Работа» и «Сохранить точку…». Сохранение хранит координаты и название в localStorage только этого браузера, замена и удаление доступны в диалоге. Очистка данных браузера удаляет метки; между устройствами они не синхронизируются. При недоступности localStorage интерфейс сообщает об ошибке.
+- [x] Public GBFS stations, availability and outage fallback
+- [x] Transit / bike / mixed route comparison
+- [x] Scheduled transfer breakdown and interactive route legs
+- [x] Address search, Home/Work places and mobile views
+- [ ] HTTPS deployment and testing on a Galaxy S24
+- [ ] Installable PWA with application icons
+- [ ] Benchmark typical trips and concurrent requests on a VPS
+- [ ] Explore transit → bike → transit routing
+- [ ] Evaluate a reliable source of live transit updates
 
-`GEOCODER_URL` позволяет заменить публичный Photon на свой совместимый сервер. Запросы ограничены примерно одним в секунду на процесс, результаты кэшируются в памяти до суток (до 256 запросов), на диск адреса не записываются. Публичный demo-сервер подходит для личного прототипа; гарантии доступности отсутствуют, для публичной нагрузки нужен отдельный провайдер или свой экземпляр. [Условия использования demo Photon](https://github.com/komoot/photon#demo-server).
-
-## Docker Compose
-
-Нужен Docker с Compose. Подготовка данных использует Python с хоста:
+## Develop and contribute
 
 ```sh
 make install
-make prepare
-docker compose --profile build run --rm graph
-docker compose up --build -d web otp
+make test check
 ```
 
-Compose публикует только `127.0.0.1:8000`; OTP доступен внутри сети Compose. Образ OTP закреплён на 2.8.1. Сборка и обслуживание графа разделены: граф можно собрать на более мощном компьютере и перенести `data/otp/` на сервер с той же версией OTP. Docker-конфигурацию следует проверить на целевом хосте; локальная проверка выполнялась с JAR и Uvicorn.
+Tests cover feed freshness, station outages, geocoding, scheduled transfers,
+initial waiting, rental rules and route normalization. They run without live
+services or a routing graph. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow
+and what to include in a routing report.
 
-Для публичного доступа нужен HTTPS reverse proxy и ограничение частоты запросов на `/api/routes`. Перед публикацией выбери поставщика тайлов: стандартные тайлы OSM подходят для небольшой ручной проверки, но не для массовой нагрузки, предзагрузки и офлайн-кэширования. [Политика тайлов OSM](https://operations.osmfoundation.org/policies/tiles/).
+| Documentation | Contents |
+| --- | --- |
+| [Getting started](docs/getting-started.md) | Local setup, Docker, configuration, updates and troubleshooting |
+| [Architecture](docs/architecture.md) | Data flow, routing scenarios, timing and interface behaviour |
+| [Data sources](docs/data-sources.md) | Feed endpoints, coverage, attribution and service terms |
+| [Hosting](docs/hosting.md) | Server sizing, measurements and deployment requirements |
+| [Screenshot examples](docs/screenshots.md) | Capture details and reproducible public example points |
 
-## Обновление данных
+## License and credits
 
-```sh
-make refresh
-make graph
-```
+Original project code and documentation are licensed under **[MIT](LICENSE)**,
+© 2026 erikotoz. Third-party software and data retain their own licenses; see
+[Third-party notices](THIRD_PARTY_NOTICES.md).
 
-Останови OTP перед заменой рабочего графа и затем запусти снова. GBFS обновляется автоматически примерно раз в минуту. OSM/GTFS обновляются отдельно; `data/otp/sources.json` сохраняет URL, дату загрузки и контрольную сумму. Сборка ограничивает расписание окном от недели назад до восьми недель вперёд, а исходный GTFS имеет собственный период действия. Обновляй и пересобирай граф до окончания этого периода. Обрезанная городская карта улиц не покрывает весь регион MVV: прототип ориентирован на Мюнхен и ближайшие пригороды.
+Powered by [OpenTripPlanner](https://www.opentripplanner.org/),
+[Leaflet](https://leafletjs.com/), [Photon](https://github.com/komoot/photon),
+[OpenStreetMap](https://www.openstreetmap.org/copyright),
+[MVV](https://www.mvv-muenchen.de/en/service-support/mvv-content-for-developers/)
+and the public MyRadl / nextbike GBFS feed.
 
-## Структура
-
-```text
-mvgogo/           API, обработка GBFS, адаптер OTP, веб-интерфейс
-otp/              настройки сборки и маршрутизации
-scripts/          подготовка данных и проверка MyRadl
-tests/            отказы API, свежесть, станции, время и нормализация маршрутов
-docs/             архитектура, источники и требования к серверу
-data/             загружаемые файлы и кэш, исключены из Git
-```
-
-Подробнее: [архитектура](docs/architecture.md), [источники](docs/data-sources.md), [сервер](docs/hosting.md).
+mvgogo is an independent project, unaffiliated with MVG, MVV, MyRadl or nextbike.

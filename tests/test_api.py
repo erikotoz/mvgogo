@@ -33,7 +33,7 @@ def test_web_and_independent_outage_handling(tmp_path):
             },
         )
         assert response.status_code == 503
-        assert "Маршрутизатор" in response.json()["detail"]
+        assert "router" in response.json()["detail"]
 
 
 def test_api_rejects_invalid_inputs(tmp_path):
@@ -61,4 +61,4 @@ def test_place_search_validation_and_outage(tmp_path):
         assert client.get("/api/places", params={"q": "M"}).status_code == 422
         response = client.get("/api/places", params={"q": "Marienplatz"})
         assert response.status_code == 503
-        assert "на карте" in response.json()["detail"]
+        assert "on the map" in response.json()["detail"]

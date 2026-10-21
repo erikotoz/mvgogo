@@ -114,7 +114,7 @@ def test_closed_return_is_rejected():
 
 def test_missing_availability_requires_manual_check():
     result = normalize(itinerary(True), request(), {})
-    assert any("проверь" in warning for warning in result["warnings"])
+    assert any("Check" in warning for warning in result["warnings"])
 
 
 def test_bike_limit_excludes_long_rides():

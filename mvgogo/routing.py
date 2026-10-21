@@ -82,7 +82,7 @@ def normalize(itinerary: dict, request: RouteRequest, stations: dict) -> dict | 
         return None
     warnings = []
     if rental_legs:
-        warnings.append("Наличие велосипеда при прибытии не гарантируется.")
+        warnings.append("Bike availability on arrival is not guaranteed.")
         for leg in rental_legs:
             # Bicycle-walking can split a rental into several legs. Check actual rental endpoints.
             for key, pickup in [("from", True), ("to", False)]:
@@ -98,9 +98,7 @@ def normalize(itinerary: dict, request: RouteRequest, stations: dict) -> dict | 
                     if not pickup and not properties["returning"]:
                         return None
                 else:
-                    warnings.append(
-                        "Наличие и возможность возврата проверь в приложении оператора."
-                    )
+                    warnings.append("Check bike availability and returns in the operator app.")
     start, end = itinerary["startTime"], itinerary["endTime"]
     arrival_seconds = round(end / 1000 - request.departure.timestamp())
     if arrival_seconds < 0:
@@ -182,11 +180,11 @@ class Router:
             raise results[0]
         stations = {f["properties"]["id"]: f["properties"] for f in collection["features"]}
         warnings = [
-            "Транспорт рассчитан по расписанию MVV, без актуальных задержек.",
-            "В прототипе проверяются прокат до или после транспорта; велосипед между двумя поездками на транспорте пока не поддержан.",
+            "Transit uses scheduled MVV times without live delays.",
+            "This prototype checks bike rental before or after transit; a bike ride between two transit journeys is not supported yet.",
         ]
         if any(isinstance(result, Exception) for result in results):
-            warnings.append("Часть вариантов не удалось рассчитать.")
+            warnings.append("Some route options could not be calculated.")
         routes, seen = [], set()
         for result in results:
             if isinstance(result, Exception):

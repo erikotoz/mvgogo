@@ -50,19 +50,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return await request.app.state.gbfs.stations()
         except FeedUnavailable as exc:
             raise HTTPException(
-                503, "Станции пока недоступны. Попробуй обновить через минуту."
+                503, "Stations are unavailable. Try refreshing in a minute."
             ) from exc
 
     @app.get("/api/places")
     async def places(request: Request, q: str = Query(min_length=2, max_length=160)):
         query = q.strip()
         if len(query) < 2:
-            raise HTTPException(422, "Введи хотя бы два символа.")
+            raise HTTPException(422, "Enter at least two characters.")
         try:
             return {"results": await request.app.state.geocoder.search(query)}
         except GeocoderUnavailable as exc:
             raise HTTPException(
-                503, "Поиск адресов недоступен. Можно выбрать точку на карте."
+                503, "Address search is unavailable. Pick a point on the map."
             ) from exc
 
     @app.post("/api/routes")
@@ -75,12 +75,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return await request.app.state.router.plan(body, collection)
         except RouterUnavailable as exc:
             raise HTTPException(
-                503, "Маршрутизатор ещё не запущен. Карта станций доступна."
+                503, "The router is not running yet. The station map is available."
             ) from exc
         except RoutingFailure as exc:
             log.warning("Routing failed: %s", exc)
             raise HTTPException(
-                502, "Не удалось построить маршрут. Проверь точки и дату поездки."
+                502, "Could not plan a route. Check your points and departure date."
             ) from exc
 
     @app.get("/")

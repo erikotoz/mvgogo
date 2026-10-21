@@ -1,0 +1,27 @@
+name: Bug report
+description: Report a routing, station data or interface problem.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the result and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How can we reproduce it?
+      description: For routing, include public endpoints, departure with timezone and walking/cycling limits. Remove private addresses.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: Browser, device, OS and commit or version
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or logs
+      description: Remove saved Home/Work places and other personal information.

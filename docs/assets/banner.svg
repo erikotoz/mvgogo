@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-labelledby="title desc">
+  <title id="title">mvgogo — Transit meets bike sharing</title>
+  <desc id="desc">A forest green banner with a lime route connecting walking, transit and a bike ride. Your route. Your rules.</desc>
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity=".045"/></pattern>
+  </defs>
+  <rect width="1280" height="400" rx="24" fill="#163e35"/>
+  <rect width="1280" height="400" rx="24" fill="url(#grid)"/>
+  <circle cx="1210" cy="40" r="250" fill="#1c4b3f"/>
+  <circle cx="1260" cy="30" r="180" fill="none" stroke="#d2f375" stroke-opacity=".12"/>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="64" y="62" fill="#d2f375" font-size="13" font-weight="700" letter-spacing="3">MUNICH, AT YOUR PACE</text>
+    <text x="59" y="149" fill="#f5f8ee" font-size="76" font-weight="800" letter-spacing="-4">mvgo<tspan fill="#d2f375">go ↗</tspan></text>
+    <text x="64" y="213" fill="#f5f8ee" font-size="31" font-weight="700" letter-spacing="-.7">Your route. Your rules.</text>
+    <text x="64" y="252" fill="#b7ccc0" font-size="21">Transit meets bike sharing.</text>
+    <rect x="64" y="305" width="203" height="38" rx="19" fill="#244f41"/>
+    <circle cx="84" cy="324" r="4" fill="#d2f375"/>
+    <text x="98" y="330" fill="#e3eddd" font-size="14">OPEN CODE. OPEN CITY.</text>
+  </g>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M734 287V209Q734 174 771 174H881" stroke="#87ac98" stroke-width="7" stroke-dasharray="2 17"/>
+    <path d="M881 174H1021Q1060 174 1060 135V103" stroke="#d2f375" stroke-width="9"/>
+    <path d="M1060 103h78" stroke="#e5bb71" stroke-width="8"/>
+    <circle cx="734" cy="287" r="20" fill="#163e35" stroke="#e8f3dc" stroke-width="4"/>
+    <circle cx="881" cy="174" r="16" fill="#163e35" stroke="#d2f375" stroke-width="5"/>
+    <circle cx="1060" cy="103" r="16" fill="#163e35" stroke="#e5bb71" stroke-width="5"/>
+    <path d="m1127 91 12 12-12 12" stroke="#e5bb71" stroke-width="5"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="14">
+    <text x="729" y="292" fill="#e8f3dc">A</text>
+    <rect x="791" y="232" width="88" height="38" rx="19" fill="#274f43"/><text x="813" y="256" fill="#d6e6d8">WALK</text>
+    <rect x="906" y="196" width="112" height="38" rx="19" fill="#d2f375"/><text x="927" y="220" fill="#163e35">TRANSIT</text>
+    <rect x="1100" y="144" width="82" height="38" rx="19" fill="#e5bb71"/><text x="1122" y="168" fill="#163e35">BIKE</text>
+  </g>
+</svg>

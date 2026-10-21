@@ -1,63 +1,117 @@
-# Архитектура
+# Architecture
 
-## Поток данных
+## Data flow
 
-Браузер запрашивает станции у FastAPI; сервер получает автообнаружение GBFS, информацию о станциях, статусы и типы велосипедов. Запросы объединяются в один снимок и кэшируются на минуту. Последний снимок сохраняется на диск. Время получения не заменяет время источника: проверяются `last_updated` фида и `last_reported` каждой станции. При сбое запроса или превышении возраста значения наличия и разрешений становятся неизвестными. Браузер также проверяет возраст и скрывает устаревшие значения между обновлениями.
+FastAPI serves the browser interface and API from one origin. The browser requests
+stations from the API; the server combines GBFS discovery, station information,
+station status and vehicle types into one snapshot, cached for a minute. The last
+snapshot is also saved to disk.
 
-Браузер передаёт только координаты, время отправления с часовым поясом и ограничения ходьбы/велопоездки. FastAPI делает четыре запроса к GraphQL `planConnection` OTP: обычный транспорт/ходьба, прокат после транспорта, прокат перед транспортом и прямой прокат. Одновременно к OTP идут максимум два запроса. Ходьба включена вместе с прокатом, поскольку OTP 2.8.1 требует такое сочетание; поиск может вернуть обычный маршрут вместо велосипеда. Разделение сценариев позволяет не терять смешанные варианты из-за конкуренции с прямой велопоездкой. OTP ищет участки по OSM и GTFS, используя собственный обновляемый GBFS. Сервер проверяет станции проката по своему снимку, убирает заведомо закрытые и пустые точки аренды, удаляет повторы и сортирует по прибытию. Два потребителя GBFS могут обновиться в разное время; снимок не считается резервированием.
+Retrieval time never replaces source time. Both the feed's `last_updated` and each
+station's `last_reported` are checked. Failed or stale updates make availability
+and rental/return permissions unknown. The browser checks age again between
+refreshes, so counts cannot remain apparently current just because a tab is open.
 
-## Границы поиска
+For routing, the browser sends coordinates, a timezone-aware departure and
+walking/cycling limits. FastAPI issues four OTP GraphQL `planConnection` searches:
 
-OTP поддерживает прокат на доступе к транспорту и на выходе из него. Этот прототип не реализует отдельный поиск велосипеда между двумя транспортными участками. Не гарантируется глобальный оптимум или полный перебор маршрутов. Для этого следующая итерация должна отдельно исследовать режимы межтранспортных пересадок и, при необходимости, соединять запросы с точными временами прибытия/отправления.
+| Scenario | Search |
+| --- | --- |
+| Baseline | Walking and public transport |
+| Bike after transit | Transit with rental on egress |
+| Bike before transit | Rental on access to transit |
+| Direct rental | Walking and bike rental without transit |
 
-Постфильтр длительности не направляет весь поиск OTP: если среди возвращённых вариантов нет подходящего, это не доказывает отсутствие маршрута в принципе. В запросе ограничены число вариантов и окно поиска.
+At most two requests reach OTP concurrently. Rental searches also include `WALK`,
+as required by the observed OTP 2.8.1 behaviour. They can return non-bike results.
+Separate scenarios prevent direct cycling from crowding out every mixed candidate.
 
-Результаты включают:
+OTP searches OSM streets and GTFS schedules, with its own GBFS updates. The API
+checks rental stations against its station snapshot, rejects known empty or closed
+pickup points and closed return points, deduplicates, filters and sorts by arrival.
+The API and OTP snapshots can differ in age; neither reserves a bike.
 
-- `total_seconds`: время от запрошенного отправления до прибытия;
-- `duration_seconds`: время от фактического начала маршрута до прибытия;
-- `initial_wait_seconds`: разницу между отправлением запроса и началом маршрута;
-- `waiting_seconds`: ожидания между участками, без начального ожидания до выхода;
-- `legs[].wait_before_seconds`: временной промежуток от конца предыдущего участка до начала текущего;
-- `connections`: время высадки/посадки, переход и остаток времени до следующего рейса;
-- время ходьбы/проката, количество пересадок, участки и геометрию;
-- предупреждения о текущем наличии, плановом расписании и неполном расчёте.
+## Search boundaries
 
-Пересадки учитываются по GTFS: время посадки следующего рейса включает ожидание после перехода. `transferSlack=2m` явно задаёт запас на пересадки в OTP, а не добавляется повторно к рассчитанному результату. Продолжение поездки в том же транспортном средстве (`interlineWithPreviousLeg`) не считается пересадкой. Расчёт остаётся плановым, без задержек и отмен.
+The prototype supports rental on access to transit and on egress from transit.
+It does not separately search for a bike ride between two transit journeys.
+The search uses a bounded result count and search window. It is not an exhaustive
+search or a guarantee of the globally fastest route.
 
-Время аренды и возврата задаётся в OTP, чтобы запас влиял на достижимость пересадок. Это предпочтительнее добавления минут к результату после расчёта.
+Walking and cycling limits filter returned candidates. If every returned candidate
+fails a limit, that does not prove there is no valid route outside the candidate
+set. Extending the search requires evaluating OTP's transfer modes or explicitly
+joining searches with compatible arrival/departure times.
 
-## Станции MyRadl
+## Timing and transfers
 
-Используются станции, включая виртуальные парковочные зоны. Режим импорта `rentalPickupTypes: ["station"]` исключает дублирование одной станции множеством велосипедных вершин. Координаты отдельных велосипедов не нужны для этого сценария.
+| Result field | Meaning |
+| --- | --- |
+| `total_seconds` | Requested departure to arrival, including initial waiting |
+| `duration_seconds` | Actual itinerary start to arrival |
+| `initial_wait_seconds` | Requested departure to actual itinerary start |
+| `waiting_seconds` | Waiting between legs, excluding initial waiting |
+| `legs[].wait_before_seconds` | Gap between the previous leg's end and this leg's start |
+| `connections` | Alighting/boarding times, walking and remaining wait for each transit connection |
 
-`num_docks_available = 0` у виртуальной станции не означает запрет возврата. OTP настроен с `overloadingAllowed: true`; сервер отдельно проверяет `is_installed` и `is_returning`, когда информация свежая. Пользователю доступен полигон парковки из `station_area`. Приложение предлагает возврат только на станциях, не произвольную парковку у адреса.
+Results also include walking/cycling totals, transfers, geometry and warnings.
+Transfers follow the GTFS timetable, so the next boarding time includes the wait
+after the connecting walk. `transferSlack: 2m` is configured in OTP and is not added
+again to the final result. `interlineWithPreviousLeg` continuations in the same
+vehicle do not count as transfers.
 
-При неизвестном наличии сервер не выдумывает велосипеды. Существующие маршруты OTP могут сопровождаться требованием ручной проверки, но отказ GBFS не гарантирует, что OTP сможет найти новые веломаршруты. Карта сохранённых станций работает независимо от этого.
+Rental pickup (90 seconds) and return (45 seconds) allowances are configured inside
+OTP so they affect which connections can be reached. Transit remains schedule-based;
+there are no live delays or cancellations.
 
-## Адреса, метки и отображение
+## MyRadl stations
 
-FastAPI проксирует явные запросы мест к Photon: один запрос примерно в секунду на процесс, кэш до суток и 256 записей, границы поиска ограничены районом Мюнхена. URL провайдера настраивается окружением. Это отдельная операция от маршрутизации: после выбора результата в OTP уходят координаты. Запросы адресов и результаты не сохраняются приложением на диск; стандартный access log HTTP-сервера может содержать текст запроса в URL.
+Station import includes virtual parking areas. `rentalPickupTypes: ["station"]`
+avoids duplicating stations as individual bicycle vertices. This scenario does not
+need precise coordinates of every bike.
 
-Метки «Дом» и «Работа» хранятся только в localStorage браузера. При их выборе повторный запрос геокодеру не нужен. Запись проверяется на ошибки, диалог позволяет заменить или удалить метку. Кнопки под каждым полем однозначно определяют, в какую точку подставляется метка.
+A virtual station reporting `num_docks_available = 0` does not necessarily prohibit
+returns. OTP uses `overloadingAllowed: true`; the API separately checks fresh
+`is_installed` and `is_returning` flags. The map can show the `station_area` polygon.
+The app plans station returns, not arbitrary parking at a destination address.
 
-На малом масштабе станции объединяются по экранной сетке, в крупном отображаются компактными точками. В режиме обзора станции имеют контрастные маркеры. Во время расчёта, при открытой карточке станции и при просмотре маршрута фоновые маркеры приглушаются; нужные станции сохраняют акцент. Флажок позволяет полностью скрыть фоновые станции. Открытая карточка сохраняется при обновлении данных. Номера шагов, цвета линий, точки посадки и высадки и интерактивная шкала связывают карту с расписанием. Ожидания не маскируются под пешие участки.
+Unknown availability is never invented. An existing OTP result can require manual
+verification. A GBFS outage does not guarantee OTP can find new rental routes,
+even though the cached station map remains usable.
 
-## Развёртывание
+## Places and presentation
 
-FastAPI раздаёт интерфейс и API с одного origin. Отдельная сборка frontend не требуется. Leaflet включён локально с лицензией. Картографические тайлы загружает браузер с OSM; полноценного сервера тайлов нет.
+Place search is separate from routing. FastAPI forwards explicit searches to
+Photon, restricted to Munich and nearby suburbs, with about one upstream request
+per second per process. An in-memory LRU cache holds up to 256 searches for 24 hours.
+The provider URL is configurable. The application does not write address searches
+to disk, but HTTP access logs can contain queries in request URLs.
 
-OTP держит граф в RAM. PostgreSQL/PostGIS, Redis, брокеры, ML и отдельный геокодер на первом этапе не нужны. Один процесс Uvicorn сохраняет единый кэш и ограничение параллельных запросов OTP. Для публичного хоста нужны внешние лимиты запросов, таймауты и HTTPS.
+Home and Work use browser localStorage. Selecting a saved place needs no new
+geocoding request. Storage failures are reported, and the save dialog supports
+replacement and deletion.
 
-## Следующие проверки
+Stations cluster by a screen grid at lower zoom levels. Individual stations use
+contrasting count markers. During route calculation, station selection and route
+viewing, background stations fade while relevant stations keep their emphasis.
+The All stations checkbox can hide background stations entirely. An open station
+card survives data refreshes. Matching leg colours and numbered steps connect the
+map to boarding, alighting and waiting times.
 
-1. Проверить 5–10 реальных привычных поездок пользователя, сравнив расчёт и опыт на месте.
-2. Измерить потребление RAM и задержки на целевом сервере.
-3. Исследовать легальный и стабильный источник задержек/отмен транспорта.
-4. При публичном запуске выбрать геокодер с подходящими лимитами и гарантиями.
-5. Проверить маршруты «транспорт → прокат → транспорт».
-6. Только при необходимости собирать историю наличия и оценивать риск отсутствия велосипеда.
+## Mobile layout
 
-## Мобильный интерфейс
+Below 821 px, Plan and Map switch without reloading. The hidden view receives
+`inert` so keyboard focus stays in the visible view. Opening the map invalidates
+Leaflet's size. The station bottom sheet sits outside Leaflet's transformed panes
+to avoid positioning errors. The layout uses `100dvh`, safe-area insets, reduced
+motion preferences and locally hosted Manrope under the OFL.
 
-До 820 пикселей карта и форма переключаются без перезагрузки, а скрытая область получает `inert`, чтобы клавиатурный фокус не уходил за экран. При открытии карты обновляется размер Leaflet. Мобильная карточка станции вынесена из преобразуемых слоёв Leaflet в отдельную нижнюю панель: это исключает смещение fixed-позиционирования из-за transform карты. Учтены `100dvh`, safe area и локальная загрузка Manrope по OFL.
+## Deployment model
+
+The frontend needs no separate build. Leaflet is bundled with its license; the
+browser loads map tiles directly from the configured tile URL. OTP keeps its graph
+in RAM. There is no database, Redis, message broker or tile server.
+
+One Uvicorn process preserves a single in-memory cache and OTP concurrency limit.
+A public deployment needs HTTPS, upstream timeouts and request/queue limits at the
+reverse proxy. See [Hosting](hosting.md).
