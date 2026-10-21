@@ -150,7 +150,7 @@ matter when reading a result:
 - [x] Transit / bike / mixed route comparison
 - [x] Scheduled transfer breakdown and interactive route legs
 - [x] Address search, Home/Work places and mobile views
-- [ ] HTTPS deployment and testing on a Android
+- [ ] HTTPS deployment and testing on Android
 - [ ] Installable PWA with application icons
 - [ ] Benchmark typical trips and concurrent requests on a VPS
 - [ ] Explore transit → bike → transit routing
