@@ -16,6 +16,10 @@ const points = {}, pointMarkers = {}, searches = {};
 let picking = 'origin', stationData = null, loadingStations = false, tripRevision = 0;
 let selectedRoute = null, selectedCard = null, legLines = [], routeStationIds = new Set();
 let saveField = null, savedPlaces = {};
+let stationFocusId = null, stationPopupMarker = null, popupSignature = '', loadingRoute = false;
+let renderingStations = false;
+const stationMarkerItems = [];
+const isMobile = () => matchMedia('(max-width:820px)').matches;
 try { savedPlaces = JSON.parse(localStorage.getItem('mvgogo.places') || '{}') || {}; } catch {}
 
 function el(tag, text, className) {
@@ -40,6 +44,24 @@ const deviceNow = () => {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0,16);
 };
 $('departure').value = deviceNow();
+
+function setMobileView(view) {
+  document.body.dataset.mobileView = view;
+  $('view-planner').setAttribute('aria-pressed', String(view === 'planner'));
+  $('view-map').setAttribute('aria-pressed', String(view === 'map'));
+  document.querySelector('.panel').inert = isMobile() && view !== 'planner';
+  document.querySelector('.map-panel').inert = isMobile() && view !== 'map';
+  if (stationFocusId && stationData) {
+    const feature = stationData.features.find(f => f.properties.id === stationFocusId);
+    if (feature) showMobileStation(feature);
+  }
+  requestAnimationFrame(() => map.invalidateSize({pan:false}));
+}
+$('view-planner').onclick = () => setMobileView('planner');
+$('view-map').onclick = () => setMobileView('map');
+matchMedia('(max-width:820px)').addEventListener('change', () => setMobileView(document.body.dataset.mobileView));
+setMobileView('planner');
+
 
 function invalidate() {
   tripRevision++;
@@ -189,60 +211,101 @@ function isFresh(properties) {
 }
 function stationPopup(feature) {
   const p = feature.properties, [lon,lat] = feature.geometry.coordinates;
-  const fresh = isFresh(p), content = el('div');
-  content.append(el('strong', p.name));
-  content.append(el('p', fresh ? `${p.bikes ?? '?'} велосипедов · ${p.renting && p.installed ? 'аренда открыта' : 'аренда закрыта'}` : 'Наличие неизвестно — проверь в приложении.'));
+  const fresh = isFresh(p), available = fresh && p.bikes > 0 && p.renting && p.installed;
+  const content = el('div', undefined, 'station-card');
+  content.append(el('div', 'MYRADL · СТАНЦИЯ', 'station-eyebrow'), el('h2', p.name));
+  const status = el('div', undefined, `station-availability ${fresh ? available ? '' : 'closed' : 'unknown'}`);
+  status.append(el('span', fresh ? String(p.bikes ?? '?') : '?', 'station-count'));
+  const label = el('div');
+  label.append(el('strong', fresh ? 'велосипедов доступно' : 'Наличие неизвестно'));
+  label.append(el('small', fresh ? available ? 'Можно взять и поехать' : p.renting && p.installed ? 'Сейчас здесь пусто' : 'Аренда закрыта' : 'Проверь в приложении оператора'));
+  status.append(label); content.append(status);
   if (fresh) {
-    for (const type of p.by_type) content.append(el('p', `${type.name}: ${type.count}`));
-    content.append(el('p', p.returning && p.installed ? 'Возврат разрешён по данным оператора.' : 'Возврат сейчас закрыт.'));
-    content.append(el('p', `Обновлено ${time(p.reported_at * 1000)} · наличие при прибытии не гарантируется.`));
+    const types = el('div', undefined, 'station-types');
+    for (const type of p.by_type) types.append(el('span', `${type.name}: ${type.count}`));
+    content.append(types, el('p', p.returning && p.installed ? 'Возврат разрешён на этой станции.' : 'Возврат сейчас закрыт.'));
+    content.append(el('p', `Обновлено в ${time(p.reported_at * 1000)}. Велосипед могут забрать до твоего прибытия.`, 'station-updated'));
   }
   const url = p.rental_url;
   if (url && /^https:\/\/(nxtb\.it|app\.nextbike\.net)(\/|$)/.test(url)) {
-    const link = el('a', 'Открыть у оператора ↗');
+    const link = el('a', 'Открыть у оператора ↗', 'station-operator');
     link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer'; content.append(link);
   }
-  content.append(el('br'));
-  for (const [which, text] of [['origin','Отсюда'],['destination','Сюда']]) {
+  const actions = el('div', undefined, 'station-actions');
+  for (const [which, text] of [['origin','Отсюда →'],['destination','→ Сюда']]) {
     const button = el('button', text); button.type = 'button';
-    button.onclick = () => { setPoint(which, lat, lon, p.name); map.closePopup(); }; content.append(button);
+    button.onclick = () => { setPoint(which, lat, lon, p.name); map.closePopup(); setMobileView('planner'); $(which).focus({preventScroll:true}); };
+    actions.append(button);
   }
-  return content;
+  content.append(actions); return content;
 }
+function applyStationEmphasis() {
+  const dim = !!selectedRoute || !!stationFocusId || loadingRoute;
+  for (const {marker, id} of stationMarkerItems) {
+    const relevant = !!id && (id === stationFocusId || routeStationIds.has(id));
+    const opacity = dim && !relevant ? .23 : 1;
+    if (marker.setOpacity) marker.setOpacity(opacity);
+    else marker.setStyle({opacity, fillOpacity:.94*opacity});
+    marker.getElement()?.classList.toggle('selected', !!id && id === stationFocusId);
+  }
+  document.body.classList.toggle('station-focus', !!stationFocusId);
+}
+function showMobileStation(feature) {
+  $('station-sheet').hidden = !isMobile();
+  if (isMobile()) $('station-sheet-content').replaceChildren(stationPopup(feature));
+}
+$('close-station').onclick = () => map.closePopup();
 function addStation(feature) {
   const p = feature.properties, fresh = isFresh(p), point = [...feature.geometry.coordinates].reverse();
   const available = fresh && p.bikes > 0 && p.renting && p.installed;
-  const used = routeStationIds.has(p.id), detailed = used || map.getZoom() >= 16;
+  const used = routeStationIds.has(p.id);
   const state = fresh ? available ? '' : 'empty' : 'unknown';
-  const marker = detailed ? L.marker(point, {
-    pane:'stations', icon:L.divIcon({className:`station-icon quiet ${state} ${used ? 'used' : ''}`,
-      html:fresh ? `${p.bikes ?? '?'}` : '?', iconSize:[used ? 24 : 19,used ? 24 : 19]}),
+  const marker = L.marker(point, {
+    pane:'stations', icon:L.divIcon({className:`station-icon ${state} ${used ? 'used' : ''}`,
+      html:`<span>${fresh ? p.bikes ?? '?' : '?'}</span>`, iconSize:[44,44], iconAnchor:[22,22]}),
     title:`${p.name}: ${fresh ? p.bikes : 'наличие неизвестно'}`
-  }) : L.circleMarker(point, {pane:'stations', radius:4, weight:1, color:'#fff',
-    fillColor:!fresh ? '#b89d72' : available ? '#87977d' : '#b6bdb3', fillOpacity:.65, bubblingMouseEvents:false});
-  marker.bindPopup(() => stationPopup(feature));
-  marker.on('popupopen', () => {
-    areaLayer.clearLayers();
-    if (p.area) L.geoJSON(p.area, {style:{color:'#758d5f', weight:1, fillOpacity:.13}}).addTo(areaLayer);
   });
-  marker.on('popupclose', () => areaLayer.clearLayers());
-  marker.addTo(stationsLayer);
+  marker.bindPopup(() => stationPopup(feature), {className:'station-source', maxWidth:360, minWidth:280, autoPan:!isMobile(), autoPanPadding:[20,30]});
+  marker.on('popupopen', () => {
+    stationFocusId = p.id; stationPopupMarker = marker; popupSignature = '';
+    showMobileStation(feature);
+    applyStationEmphasis(); areaLayer.clearLayers();
+    if (p.area) L.geoJSON(p.area, {style:{color:'#26814f', weight:2, fillOpacity:.16}, interactive:false}).addTo(areaLayer);
+  });
+  marker.on('popupclose', () => {
+    if (stationPopupMarker !== marker) return;
+    stationFocusId = null; stationPopupMarker = null; areaLayer.clearLayers(); applyStationEmphasis();
+    $('station-sheet').hidden = true;
+    if (!renderingStations) renderStations();
+  });
+  stationMarkerItems.push({marker,id:p.id}); marker.addTo(stationsLayer);
 }
 function renderStations() {
-  stationsLayer.clearLayers();
   if (!stationData) return;
+  // Keep the station card open while background data or map position changes.
+  if (stationPopupMarker?.isPopupOpen()) {
+    const current = stationData.features.find(f => f.properties.id === stationFocusId);
+    if (current) {
+      const signature = JSON.stringify([current.properties, isFresh(current.properties)]);
+      if (signature !== popupSignature) { stationPopupMarker.setPopupContent(stationPopup(current)); showMobileStation(current); popupSignature = signature; }
+    }
+    applyStationEmphasis(); return;
+  }
+  renderingStations = true;
+  stationsLayer.clearLayers(); stationMarkerItems.length = 0;
+
   const freshCount = stationData.features.filter(f => isFresh(f.properties)).length;
   const visible = stationData.features.filter(f => {
     const used = routeStationIds.has(f.properties.id);
-    return (used || $('all-stations').checked) && map.getBounds().pad(.08).contains([...f.geometry.coordinates].reverse());
+    return (used || f.properties.id === stationFocusId || $('all-stations').checked) && map.getBounds().pad(.08).contains([...f.geometry.coordinates].reverse());
   });
   if (map.getZoom() >= 15) visible.forEach(addStation);
   else {
     const groups = new Map(), zoom = map.getZoom();
     for (const feature of visible) {
-      if (routeStationIds.has(feature.properties.id)) { addStation(feature); continue; }
+      if (routeStationIds.has(feature.properties.id) || feature.properties.id === stationFocusId) { addStation(feature); continue; }
       const pixel = map.project([...feature.geometry.coordinates].reverse(), zoom);
-      const key = `${Math.floor(pixel.x / 58)},${Math.floor(pixel.y / 58)}`;
+      const key = `${Math.floor(pixel.x / 70)},${Math.floor(pixel.y / 70)}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(feature);
     }
@@ -250,11 +313,13 @@ function renderStations() {
       if (group.length === 1) { addStation(group[0]); continue; }
       const lat = group.reduce((sum,f) => sum + f.geometry.coordinates[1], 0) / group.length;
       const lon = group.reduce((sum,f) => sum + f.geometry.coordinates[0], 0) / group.length;
-      L.marker([lat,lon], {pane:'stations', icon:L.divIcon({className:'station-cluster', html:String(group.length), iconSize:[26,26]}), title:`${group.length} станций — приблизить`})
+      const cluster = L.marker([lat,lon], {pane:'stations', icon:L.divIcon({className:'station-cluster', html:`<span>${group.length}</span>`, iconSize:[44,44], iconAnchor:[22,22]}), title:`${group.length} станций — приблизить`})
         .on('click', () => map.setView([lat,lon], Math.min(16, zoom + 2))).addTo(stationsLayer);
+      stationMarkerItems.push({marker:cluster,id:null});
     }
   }
-  $('feed-status').textContent = `${stationData.features.length} станций · ${freshCount ? 'наличие обновляется' : 'наличие неизвестно'}${selectedRoute && !$('all-stations').checked ? ' · только на маршруте' : ''}`;
+  $('feed-status').textContent = `${stationData.features.length} станций · ${selectedRoute ? 'фокус на маршруте' : freshCount ? 'данные обновляются' : 'наличие неизвестно'}`;
+  renderingStations = false; applyStationEmphasis();
 }
 map.on('zoomend moveend', renderStations);
 $('all-stations').onchange = renderStations;
@@ -293,8 +358,8 @@ function decodePolyline(encoded) {
 function legColors(route) {
   const lines = new Map(), palette = ['#2567a3','#8853a1','#237c80','#a34f70'];
   return route.legs.map(leg => {
-    if (leg.rentedBike) return '#b87922';
-    if (!leg.transitLeg) return '#7a8581';
+    if (leg.rentedBike) return '#946017';
+    if (!leg.transitLeg) return '#52675a';
     const key = leg.route?.gtfsId || leg.route?.shortName || leg.mode;
     if (!lines.has(key)) lines.set(key, palette[lines.size % palette.length]);
     return lines.get(key);
@@ -307,21 +372,20 @@ function focusLeg(index, scrollToMap = true) {
   const leg = selectedRoute.legs[index];
   const line = legLines[index];
   map.fitBounds(line ? line.getBounds() : [[leg.from.lat,leg.from.lon],[leg.to.lat,leg.to.lon]], {padding:[50,85], maxZoom:16});
-  if (scrollToMap && matchMedia('(max-width:800px)').matches) $('map').scrollIntoView({behavior:'smooth', block:'start'});
+  if (scrollToMap && isMobile()) setMobileView('map');
 }
 function waypoint(place, number, title, timestamp, index, color) {
-  const content = el('div'); content.append(el('strong', title), el('p', `${time(timestamp)} · ${placeName(place.name) || ''}`));
+  const content = el('div', undefined, 'waypoint-popup'); content.append(el('strong', title), el('p', `${time(timestamp)} · ${placeName(place.name) || ''}`));
   const sid = place.vehicleRentalStation?.stationId?.split(':').pop();
   const station = sid && stationData?.features.find(f => f.properties.id === sid);
   if (station) content.append(stationPopup(station));
-  const marker = L.marker([place.lat,place.lon], {pane:'waypoints', icon:L.divIcon({className:'waypoint-icon', html:String(number), iconSize:[22,22], iconAnchor:[11,11]})});
+  const marker = L.marker([place.lat,place.lon], {pane:'waypoints', icon:L.divIcon({className:'waypoint-icon', html:String(number), iconSize:[28,28], iconAnchor:[14,14]})});
   marker.bindPopup(content).on('click', () => focusLeg(index, false)).addTo(waypointsLayer);
 }
 function showRoute(route, card) {
-  const firstSelection = !selectedRoute;
+  map.closePopup();
   selectedRoute = route; selectedCard = card;
   routeLayer.clearLayers(); waypointsLayer.clearLayers(); legLines = [];
-  if (firstSelection) $('all-stations').checked = false;
   routeStationIds = new Set(route.legs.flatMap(leg => [leg.from,leg.to]).map(p => p.vehicleRentalStation?.stationId?.split(':').pop()).filter(Boolean));
   document.querySelectorAll('.route-card').forEach(n => {
     n.classList.toggle('selected', n === card);
@@ -370,6 +434,9 @@ function renderRoutes(data) {
     select.append(el('div', `Пешком ${minutes(route.walk_seconds)} мин · велосипед ${minutes(route.bike_seconds)} мин · ожидание ${minutes(route.waiting_seconds || 0)} мин · пересадок ${route.transfers}`, 'metric'));
     card.append(select);
     const details = el('div', undefined, 'route-details'); details.hidden = true;
+    const overview = el('button', 'Весь маршрут на карте ↗', 'route-show-map'); overview.type = 'button';
+    overview.onclick = () => { showRoute(route, card); setMobileView('map'); };
+    details.append(overview);
     const timeline = el('ol', undefined, 'timeline');
     route.legs.forEach((leg,index) => {
       const row = el('li'), connection = route.connections?.find(c => c.before_leg_index === index);
@@ -392,11 +459,13 @@ function renderRoutes(data) {
     $('results').append(card); firstCard ||= card;
   }
   showRoute(data.routes[0], firstCard);
+  if (isMobile()) { setMobileView('planner'); requestAnimationFrame(() => $('results').scrollIntoView({behavior:'smooth', block:'start'})); }
 }
 $('trip-form').onsubmit = async event => {
   event.preventDefault();
   if (!points.origin || !points.destination) { $('message').textContent = 'Выбери результат поиска для обеих точек или отметь их на карте.'; return; }
-  invalidate(); const revision = tripRevision;
+  map.closePopup(); invalidate(); const revision = tripRevision;
+  loadingRoute = true; applyStationEmphasis();
   $('submit').disabled = true; $('message').textContent = 'Сравниваем маршруты…';
   try {
     const response = await fetch('/api/routes', {method:'POST', headers:{'Content-Type':'application/json'},
@@ -407,5 +476,5 @@ $('trip-form').onsubmit = async event => {
     if (!response.ok) { $('message').textContent = typeof data.detail === 'string' ? data.detail : 'Проверь координаты в районе Мюнхена, дату и ограничения.'; return; }
     renderRoutes(data);
   } catch { if (revision === tripRevision) $('message').textContent = 'Расчёт недоступен или занял слишком много времени. Попробуй ещё раз.'; }
-  finally { $('submit').disabled = false; }
+  finally { $('submit').disabled = false; loadingRoute = false; applyStationEmphasis(); }
 };

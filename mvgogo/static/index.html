@@ -10,10 +10,10 @@
   <script defer src="/static/vendor/leaflet.js"></script>
   <script defer src="/static/app.js"></script>
 </head>
-<body>
+<body data-mobile-view="planner">
   <aside class="panel">
-    <header><a class="wordmark" href="/">mvgo<span>go</span><i>↗</i></a><span class="city">MÜNCHEN</span></header>
-    <div class="intro"><span class="eyebrow">МЕНЬШЕ ПЕРЕСАДОК. БОЛЬШЕ ГОРОДА.</span><h1>А дальше —<br>на велосипеде.</h1><p>Сравни общественный транспорт с поездкой через станции MyRadl.</p></div>
+    <header><a class="wordmark" href="/">mvgo<span>go</span><i>↗</i></a><span class="city"><span></span> MÜNCHEN</span></header>
+    <div class="intro"><span class="eyebrow">ГОРОД В ТВОЁМ РИТМЕ</span><h1>Твой маршрут.<br><span>Твои правила.</span></h1><p>Транспорт + MyRadl. Находи удобные пересадки и забирай время себе.</p></div>
     <form id="trip-form">
       <div class="place-group">
         <div class="point-field"><button type="button" class="point-button active" id="pick-origin" aria-label="Выбрать отправление на карте">A</button><label for="origin">Откуда<input id="origin" placeholder="Адрес, место или координаты" required autocomplete="off" aria-controls="origin-results"></label><button type="button" class="search-place" id="search-origin" aria-label="Найти отправление по адресу">Найти</button></div>
@@ -25,9 +25,9 @@
         <div id="destination-results" class="place-results" role="group" aria-label="Результаты поиска назначения" hidden></div>
         <div class="saved-shortcuts"><button type="button" data-use="home" data-field="destination">⌂ Дом</button><button type="button" data-use="work" data-field="destination">▣ Работа</button><button type="button" data-save="destination">Сохранить точку…</button></div>
       </div>
-      <p class="search-help">Введи адрес и нажми «Найти» или Enter. Поиск: Photon / OpenStreetMap.</p>
+      <p class="search-help">Адрес, любимое место или точка на карте. Для поиска нажми «Найти».</p>
       <div class="shortcuts"><button type="button" id="locate">⌖ Моё положение</button><button type="button" id="example">Пример поездки</button><button type="button" id="swap" aria-label="Поменять точки местами">A ⇄ B</button></div>
-      <label class="departure" for="departure">Отправление · время устройства<input type="datetime-local" id="departure" required></label>
+      <label class="departure" for="departure">Когда отправляемся?<input type="datetime-local" id="departure" required></label>
       <details class="preferences"><summary>Настроить поездку</summary><label for="max-walk">Пешком за всю поездку, мин<input type="number" id="max-walk" min="1" max="60" value="30"></label><label for="max-bike">На велосипеде за всю поездку, мин<input type="number" id="max-bike" min="1" max="120" value="30"></label></details>
       <button class="submit" id="submit" type="submit">Найти маршрут <span>↗</span></button>
     </form>
@@ -37,11 +37,19 @@
   </aside>
   <main class="map-panel">
     <div id="map" aria-label="Карта Мюнхена со станциями MyRadl"></div>
-    <div class="map-heading"><span class="live-dot"></span><div><strong>MyRadl рядом</strong><span id="feed-status" role="status">Загружаем станции…</span></div><button id="refresh" type="button" aria-label="Обновить станции">↻</button></div>
+    <div class="map-heading"><span class="map-brand">↗</span><div><strong>Велосипед рядом <span class="live-dot"></span></strong><span id="feed-status" role="status">Загружаем станции…</span></div><button id="refresh" type="button" aria-label="Обновить станции">↻</button></div>
     <div class="map-legend" id="station-legend"><span><i class="available"></i> Есть</span><span><i class="empty"></i> Пусто</span><span><i class="unknown"></i> Неизвестно</span><label><input type="checkbox" id="all-stations" checked> Все станции</label></div>
     <div class="route-key" id="route-key" aria-label="Участки выбранного маршрута" hidden></div>
     <div class="map-hint" id="map-hint">Нажми на карту, чтобы выбрать отправление A</div>
+    <section class="station-sheet" id="station-sheet" role="dialog" aria-label="Информация о станции" hidden>
+      <button type="button" id="close-station" aria-label="Закрыть станцию">×</button>
+      <div id="station-sheet-content"></div>
+    </section>
   </main>
+  <nav class="mobile-nav" aria-label="Разделы приложения">
+    <button type="button" id="view-planner" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12M6 12h8M6 18h12"/></svg>Маршрут</button>
+    <button type="button" id="view-map" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6ZM9 3v15m6-12v15"/></svg>Карта</button>
+  </nav>
   <dialog id="save-dialog">
     <form method="dialog" id="save-form">
       <h2>Сохранить место</h2><p id="save-label"></p>
