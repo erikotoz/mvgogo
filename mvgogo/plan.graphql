@@ -7,7 +7,7 @@ query Plan($from: PlanLabeledLocationInput!, $to: PlanLabeledLocationInput!, $de
     edges { node {
       startTime endTime
       legs {
-        mode transitLeg rentedBike duration distance startTime endTime
+        mode transitLeg rentedBike duration distance startTime endTime headsign interlineWithPreviousLeg
         route { gtfsId shortName longName color }
         from { name lat lon vehicleRentalStation { stationId name } }
         to { name lat lon vehicleRentalStation { stationId name } }

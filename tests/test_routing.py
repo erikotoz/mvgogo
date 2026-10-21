@@ -52,6 +52,49 @@ def test_initial_wait_is_included_in_comparison():
     assert result["initial_wait_seconds"] == 300
 
 
+def test_bus_connection_includes_scheduled_wait_and_walk():
+    first = itinerary()["legs"][0]
+    walking = {
+        **first,
+        "mode": "WALK",
+        "transitLeg": False,
+        "startTime": first["endTime"],
+        "endTime": first["endTime"] + 180_000,
+        "duration": 180,
+    }
+    second = {
+        **first,
+        "startTime": first["endTime"] + 600_000,
+        "endTime": first["endTime"] + 1200_000,
+    }
+    trip = {
+        "startTime": first["startTime"],
+        "endTime": second["endTime"],
+        "legs": [first, walking, second],
+    }
+    route = normalize(trip, request(), {})
+    assert route["transfers"] == 1
+    assert route["connections"][0]["available_seconds"] == 600
+    assert route["connections"][0]["walk_seconds"] == 180
+    assert route["connections"][0]["wait_seconds"] == 420
+    assert route["legs"][2]["wait_before_seconds"] == 420
+    assert route["waiting_seconds"] == 420
+    assert route["total_seconds"] == 2100
+    assert route["duration_seconds"] == sum(leg["duration"] for leg in route["legs"]) + 420
+
+
+def test_staying_on_same_vehicle_does_not_count_as_transfer():
+    first = itinerary()["legs"][0]
+    second = {
+        **first,
+        "startTime": first["endTime"],
+        "endTime": first["endTime"] + 600_000,
+        "interlineWithPreviousLeg": True,
+    }
+    trip = {"startTime": first["startTime"], "endTime": second["endTime"], "legs": [first, second]}
+    assert normalize(trip, request(), {})["transfers"] == 0
+
+
 @pytest.mark.parametrize(
     "station",
     [

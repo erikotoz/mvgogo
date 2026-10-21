@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
+from itertools import pairwise
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -44,9 +45,37 @@ def station_id(place: dict) -> str | None:
 
 
 def normalize(itinerary: dict, request: RouteRequest, stations: dict) -> dict | None:
-    legs = itinerary["legs"]
+    legs = []
+    previous_end = itinerary["startTime"]
+    for leg in itinerary["legs"]:
+        legs.append(
+            {**leg, "wait_before_seconds": max(0, round((leg["startTime"] - previous_end) / 1000))}
+        )
+        previous_end = leg["endTime"]
     rental_legs = [leg for leg in legs if leg.get("rentedBike")]
     transit_legs = [leg for leg in legs if leg.get("transitLeg")]
+    transit_indices = [i for i, leg in enumerate(legs) if leg.get("transitLeg")]
+    connections = []
+    for before, after in pairwise(transit_indices):
+        if legs[after].get("interlineWithPreviousLeg"):
+            continue
+        available = round((legs[after]["startTime"] - legs[before]["endTime"]) / 1000)
+        connection_walk = round(
+            sum(leg["duration"] for leg in legs[before + 1 : after] if leg["mode"] == "WALK")
+        )
+        connections.append(
+            {
+                "after_leg_index": before,
+                "before_leg_index": after,
+                "from": legs[before]["to"]["name"],
+                "to": legs[after]["from"]["name"],
+                "alight_time": legs[before]["endTime"],
+                "board_time": legs[after]["startTime"],
+                "available_seconds": available,
+                "walk_seconds": connection_walk,
+                "wait_seconds": max(0, available - connection_walk),
+            }
+        )
     walk = sum(leg["duration"] for leg in legs if leg["mode"] == "WALK")
     bike = sum(leg["duration"] for leg in rental_legs)
     if walk > request.max_walk_minutes * 60 or bike > request.max_bike_minutes * 60:
@@ -85,7 +114,9 @@ def normalize(itinerary: dict, request: RouteRequest, stations: dict) -> dict | 
         "initial_wait_seconds": max(0, round(start / 1000 - request.departure.timestamp())),
         "walk_seconds": round(walk),
         "bike_seconds": round(bike),
-        "transfers": max(0, len(transit_legs) - 1),
+        "transfers": len(connections),
+        "connections": connections,
+        "waiting_seconds": sum(leg["wait_before_seconds"] for leg in legs),
         "warnings": list(dict.fromkeys(warnings)),
         "legs": legs,
     }

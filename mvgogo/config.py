@@ -12,3 +12,4 @@ class Settings:
     data_dir: Path = Path(os.getenv("DATA_DIR", "data/cache"))
     max_age: int = int(os.getenv("AVAILABILITY_MAX_AGE", "180"))
     source_manifest: Path = Path(os.getenv("SOURCE_MANIFEST", "data/otp/sources.json"))
+    geocoder_url: str = os.getenv("GEOCODER_URL", "https://photon.komoot.io/api/")

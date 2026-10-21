@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from mvgogo.config import Settings
 from mvgogo.gbfs import FeedUnavailable
+from mvgogo.geocoding import GeocoderUnavailable
 from mvgogo.main import create_app
 from mvgogo.routing import RouterUnavailable
 
@@ -47,3 +48,17 @@ def test_api_rejects_invalid_inputs(tmp_path):
             },
         )
         assert response.status_code == 422
+
+
+def test_place_search_validation_and_outage(tmp_path):
+    class OfflineGeocoder:
+        async def search(self, query):
+            raise GeocoderUnavailable()
+
+    with TestClient(create_app(Settings(data_dir=tmp_path))) as client:
+        client.app.state.geocoder = OfflineGeocoder()
+        assert client.get("/api/places", params={"q": "  "}).status_code == 422
+        assert client.get("/api/places", params={"q": "M"}).status_code == 422
+        response = client.get("/api/places", params={"q": "Marienplatz"})
+        assert response.status_code == 503
+        assert "на карте" in response.json()["detail"]
