@@ -1,0 +1,27 @@
+[Unit]
+Description=mvgogo OpenTripPlanner
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=600
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=mvgogo
+Group=mvgogo
+WorkingDirectory=/opt/mvgogo
+Environment=OTP_HEAP=4G
+EnvironmentFile=-/etc/mvgogo.env
+ExecStart=/usr/bin/java -Xmx${OTP_HEAP} -XX:+UseSerialGC -jar /opt/mvgogo/data/tools/otp.jar --load --serve --bindAddress 127.0.0.1 /opt/mvgogo/data/otp
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=60
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

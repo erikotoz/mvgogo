@@ -69,6 +69,10 @@ A persistent VPS suits OTP's loaded graph better than short-lived functions with
 cold starts. A domain and HTTPS make the browser app reachable from a phone;
 installation as a PWA is still a planned feature.
 
+For the tested Ubuntu/systemd setup, HTTPS and the experimental 2 GB personal-use
+profile, see [Native Ubuntu deployment](deployment.md). The normal resource
+recommendation above remains unchanged.
+
 ## What to measure on the host
 
 Check OTP RSS after loading and repeated queries, heap/GC behaviour, first-request

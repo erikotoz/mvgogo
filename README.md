@@ -123,9 +123,9 @@ A local smoke test used about **2.36 GiB RSS** for OTP after initial queries. Fi
 warmed route comparisons took **0.44–0.61 seconds** each on a powerful laptop.
 These are observations, not VPS capacity or latency guarantees.
 
-The repository includes Docker Compose. Public hosting also needs HTTPS, request
-limits and suitable map tile/geocoding providers. The project has no hosted public
-demo at present.
+The repository includes Docker Compose and a [native Ubuntu deployment guide](docs/deployment.md).
+Public hosting also needs HTTPS, request limits and suitable map tile/geocoding
+providers. Use the deployment guide to run your own instance.
 
 [Deployment notes and measurements →](docs/hosting.md)
 
@@ -174,6 +174,7 @@ and what to include in a routing report.
 | [Architecture](docs/architecture.md) | Data flow, routing scenarios, timing and interface behaviour |
 | [Data sources](docs/data-sources.md) | Feed endpoints, coverage, attribution and service terms |
 | [Hosting](docs/hosting.md) | Server sizing, measurements and deployment requirements |
+| [Ubuntu deployment](docs/deployment.md) | systemd services, nginx, HTTPS and a constrained personal-use profile |
 | [Screenshot examples](docs/screenshots.md) | Capture details and reproducible public example points |
 
 ## License and credits

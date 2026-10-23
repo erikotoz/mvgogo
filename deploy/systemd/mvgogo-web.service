@@ -1,0 +1,34 @@
+[Unit]
+Description=mvgogo web application
+Wants=network-online.target mvgogo-otp.service
+After=network-online.target mvgogo-otp.service
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=mvgogo
+Group=mvgogo
+WorkingDirectory=/opt/mvgogo
+Environment=OTP_URL=http://127.0.0.1:8080/otp/gtfs/v1
+Environment=DATA_DIR=/var/lib/mvgogo/cache
+Environment=SOURCE_MANIFEST=/opt/mvgogo/data/otp/sources.json
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+EnvironmentFile=-/etc/mvgogo.env
+ExecStart=/opt/mvgogo/.venv/bin/python -m uvicorn mvgogo.main:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+StateDirectory=mvgogo
+StateDirectoryMode=0750
+MemoryMax=256M
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
