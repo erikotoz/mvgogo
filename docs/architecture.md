@@ -106,6 +106,25 @@ Leaflet's size. The station bottom sheet sits outside Leaflet's transformed pane
 to avoid positioning errors. The layout uses `100dvh`, safe-area insets, reduced
 motion preferences and locally hosted Manrope under the OFL.
 
+Completed trips and form drafts are separate. Editing an endpoint, opening a
+station or failing a new routing request does not clear the previous itinerary.
+Map taps only change endpoints while an explicit A/B picker is active. Route
+alternatives form a horizontal strip above one readable, expanded itinerary.
+
+`trip-state.mjs` validates a versioned localStorage snapshot containing the form,
+committed endpoints, normalized route results, selected alternative and leg, map
+viewport, open place and reading position. Changes are saved after a short
+debounce; `visibilitychange` to hidden and `pagehide` flush synchronously. A
+discarded tab restores locally without a network routing request. Storage errors
+are visible, malformed snapshots are ignored, and saved trip age is displayed.
+Station availability is always fetched separately and checked for freshness.
+
+The History API tracks trip, editor, map, picker and place layers. Browser Back
+unwinds those layers, including after restoration, without clearing the saved
+trip. It remains possible to leave the site from its root screen. Universal
+[Google Maps URLs](https://developers.google.com/maps/documentation/urls/get-started)
+open exact stop/station coordinates with walking navigation, without an API key.
+
 ## Deployment model
 
 The frontend needs no separate build. Leaflet is bundled with its license; the

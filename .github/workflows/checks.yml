@@ -10,4 +10,7 @@ jobs:
           version: "0.9.13"
       - run: uv python install 3.13
       - run: uv sync --frozen --group dev --python 3.13
-      - run: make test check
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: make test check test-web

@@ -118,6 +118,13 @@ make test check
 ```
 
 These tests use mocked upstream services and do not need a graph or network.
+The frontend state and browser-history regression checks use Node.js 22 or later
+(only for development; the app has no frontend build or Node runtime requirement):
+
+```sh
+make test-web
+```
+
 For an optional live feed inspection:
 
 ```sh
@@ -127,16 +134,32 @@ For an optional live feed inspection:
 ## On a phone
 
 At widths of 820 px or less, **Plan** and **Map** switch between full-screen views.
-Station details appear in a bottom sheet. **Start here / End here** returns to the
-planner; route steps and **View full route on map** open the map.
+After planning, **Trip** replaces **Plan**. Station and route-stop details appear
+in a readable bottom sheet. **Use as start / Use as destination** opens the
+editor; route steps and **View full route on map** open the map. Blank map taps
+do not change the route. Use **A** or **B** to explicitly pick a new endpoint.
+
+Your last trip, selected alternative and leg, map position and reading position
+are saved on this device and restored when you reopen the browser. **Edit trip**
+keeps that itinerary available through **Return to your trip**. Browser Back
+closes place details, then returns from the map to the trip; leaving the site
+does not erase its saved itinerary. The calculated time and an age notice help
+identify an old trip. Use **Refresh** to calculate routes for the current time.
+
+**Navigate in Google Maps** opens walking directions to the exact coordinates
+of a station or route stop. Each stop in the itinerary also has a direct link.
 
 The app is currently a browser application. It does not yet include an installable
 PWA, APK or offline routing. `localhost` on a phone refers to the phone itself, so
 a phone needs a reachable server URL. The default development server and Compose
 port deliberately bind to the computer's loopback interface.
 
-Home and Work are saved in that browser's localStorage. They are not synced across
-devices, and clearing browser data removes them. Address searches are sent to
+Home, Work and your last trip are saved in that browser's localStorage. They are
+not synced across devices; private browsing, storage restrictions or clearing
+browser data can remove them. A save warning appears if storage is unavailable.
+Saved trip details can be read again locally, but this is not offline navigation:
+new routes, live station availability and map tiles need network access.
+Address searches are sent to
 Photon only after pressing **Find** or Enter. Server access logs may contain search
 queries in request URLs; account for that when deploying.
 

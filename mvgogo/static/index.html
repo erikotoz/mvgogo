@@ -8,13 +8,20 @@
   <title>mvgogo — Transit meets bike sharing</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/vendor/leaflet.css">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=20261023-3">
   <script defer src="/static/vendor/leaflet.js"></script>
-  <script defer src="/static/app.js"></script>
+  <script type="module" src="/static/app.js?v=20261023-3"></script>
 </head>
-<body data-mobile-view="planner">
+<body data-mobile-view="planner" data-screen="edit">
   <aside class="panel">
-    <header><a class="wordmark" href="/">mvgo<span>go</span><i>↗</i></a><span class="city"><span></span> MUNICH</span></header>
+    <header>
+      <button id="app-back" type="button" class="icon-button" aria-label="Back" hidden>←</button>
+      <a class="wordmark" id="brand-home" href="/">mvgo<span>go</span><i>↗</i></a>
+      <span class="city"><span></span> MUNICH</span>
+      <button id="edit-trip" type="button" class="text-button" hidden>Edit trip</button>
+    </header>
+    <section id="trip-editor" aria-label="Plan your trip">
+    <button id="cancel-edit" type="button" class="back-to-trip" hidden>← Return to your trip</button>
     <div class="intro"><span class="eyebrow">THE CITY, AT YOUR PACE</span><h1>Your route.<br><span>Your rules.</span></h1><p>Transit meets MyRadl. Find a better connection and take back your time.</p></div>
     <form id="trip-form">
       <div class="place-group">
@@ -33,18 +40,32 @@
       <details class="preferences"><summary>Make it your trip</summary><label for="max-walk">Total walking, min<input type="number" id="max-walk" min="1" max="60" value="30"></label><label for="max-bike">Total cycling, min<input type="number" id="max-bike" min="1" max="120" value="30"></label></details>
       <button class="submit" id="submit" type="submit">Find a route <span>↗</span></button>
     </form>
-    <p id="message" role="status">Pick your start, A, on the map. Tap a station to explore.</p>
+    </section>
+    <p id="message" role="status">Search for a place, or tap A or B to pick it on the map.</p>
+    <section id="journey" aria-label="Your saved trip" hidden>
+      <div class="journey-heading"><span class="eyebrow">YOUR TRIP</span><h1 id="journey-title"></h1></div>
+      <div class="trip-actions"><div class="trip-storage"><span id="save-status" role="status">Saved on this device</span><span id="calculated-at"></span></div><button id="refresh-trip" type="button" class="refresh-trip" aria-label="Refresh routes for now">Refresh ↻</button></div>
+      <p id="trip-age" class="trip-age" hidden></p>
+      <h2 class="section-title">Choose your route</h2>
     <section id="results" aria-label="Trip options"></section>
+    </section>
     <footer>Schedules: Münchner Verkehrs- und Tarifverbund GmbH (MVV). <span id="mvv-date"></span> Stations: MyRadl / nextbike. Search: Photon / © OpenStreetMap contributors.<br>Check and rent your bike in the operator app.</footer>
   </aside>
   <main class="map-panel">
     <div id="map" aria-label="Map of Munich with MyRadl stations"></div>
-    <div class="map-heading"><span class="map-brand">↗</span><div><strong>Your next bike <span class="live-dot"></span></strong><span id="feed-status" role="status">Loading stations…</span></div><button id="refresh" type="button" aria-label="Refresh stations">↻</button></div>
-    <div class="map-legend" id="station-legend"><span><i class="available"></i> Available</span><span><i class="empty"></i> Empty</span><span><i class="unknown"></i> Unknown</span><label><input type="checkbox" id="all-stations" checked> All stations</label></div>
-    <div class="route-key" id="route-key" aria-label="Selected route legs" hidden></div>
-    <div class="map-hint" id="map-hint">Tap the map to choose your start, A</div>
-    <section class="station-sheet" id="station-sheet" role="dialog" aria-label="Station details" hidden>
-      <button type="button" id="close-station" aria-label="Close station details">×</button>
+    <div class="map-heading" id="browse-heading"><span class="map-brand">↗</span><div><strong>Your next bike <span class="live-dot"></span></strong><span id="feed-status" role="status">Loading stations…</span></div><button id="refresh" type="button" aria-label="Refresh stations">↻</button></div>
+    <div class="map-trip-toolbar" id="map-trip-toolbar" hidden>
+      <button type="button" id="map-back">← Trip</button><div><strong id="map-trip-title"></strong><span id="map-trip-time"></span></div>
+      <button type="button" id="fit-route" aria-label="Show full route">⤢</button>
+    </div>
+    <div class="map-settings"><button id="map-layers" type="button" aria-expanded="false" aria-controls="station-legend">Layers</button>
+      <div class="map-legend" id="station-legend" hidden><strong>Bike availability</strong><span><i class="available"></i> Available</span><span><i class="empty"></i> Empty</span><span><i class="unknown"></i> Unknown</span><label><input type="checkbox" id="all-stations" checked> Show other stations</label></div>
+    </div>
+    <div class="route-key" id="route-key" aria-label="Route legs" hidden></div>
+    <div class="map-hint" id="map-hint" hidden><span id="map-hint-text"></span><button id="cancel-pick" type="button">Cancel</button></div>
+    <div id="map-start-actions" class="map-start-actions"><button type="button" data-pick="origin">Set start A</button><button type="button" data-pick="destination">Set destination B</button></div>
+    <section class="station-sheet" id="station-sheet" role="dialog" aria-label="Place details" hidden>
+      <button type="button" id="close-station" aria-label="Close place details">×</button>
       <div id="station-sheet-content"></div>
     </section>
   </main>

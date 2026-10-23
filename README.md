@@ -31,11 +31,11 @@ routes in one map. No account or API key is required for local use.
 
 <p align="center"><em>Münchner Freiheit → Westpark: numbered legs connect the itinerary to the map.</em></p>
 
-| Plan your trip | Explore a station |
+| Keep your trip on your phone | Navigate to a station |
 | :---: | :---: |
-| <img src="docs/assets/mobile-plan.jpg" alt="Mobile trip planner with address search and Home and Work shortcuts" width="320"> | <img src="docs/assets/mobile-station.jpg" alt="Mobile station card with bike availability and pickup and return information" width="320"> |
+| <img src="docs/assets/mobile-trip.jpg" alt="Saved mobile trip with route alternatives, departure times and walking and cycling totals" width="320"> | <img src="docs/assets/mobile-station.jpg" alt="Mobile station card with Google Maps navigation and current bike availability" width="320"> |
 
-Screenshots show actual application output captured on 21 October 2026. Routes,
+Screenshots show actual application output captured on 21 and 23 October 2026. Routes,
 station counts and availability are examples from that session and will change.
 Map imagery: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright).
 
@@ -49,6 +49,8 @@ Map imagery: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyr
 | **A map that stays readable** | Station clusters while browsing; background stations fade when a route or station is selected. |
 | **Places, not just coordinates** | Address and landmark search, map selection and browser-local Home/Work shortcuts. |
 | **A phone-friendly layout** | Dedicated Plan and Map views, readable station cards and numbered route steps. |
+| **A trip that stays with you** | Restore your itinerary, selected route, map and reading position after reopening the browser. |
+| **One tap to navigation** | Open any rental station or route stop at its exact coordinates in Google Maps. |
 | **Honest fallback behaviour** | Cached station locations remain visible during outages; stale availability becomes unknown. |
 
 ## Get started
@@ -150,6 +152,7 @@ matter when reading a result:
 - [x] Transit / bike / mixed route comparison
 - [x] Scheduled transfer breakdown and interactive route legs
 - [x] Address search, Home/Work places and mobile views
+- [x] Durable trip restoration, browser Back navigation and Google Maps links
 - [ ] HTTPS deployment and testing on Android
 - [ ] Installable PWA with application icons
 - [ ] Benchmark typical trips and concurrent requests on a VPS

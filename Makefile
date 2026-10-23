@@ -2,8 +2,9 @@ PYTHON ?= .venv/bin/python
 JAVA ?= java
 BUILD_HEAP ?= 8G
 OTP_HEAP ?= 4G
+NODE ?= node
 
-.PHONY: install prepare graph router dev test check refresh
+.PHONY: install prepare graph router dev test test-web check refresh
 install:
 	uv sync --group dev
 prepare:
@@ -18,6 +19,8 @@ dev:
 	$(PYTHON) -m uvicorn mvgogo.main:app --host 127.0.0.1 --port 8000
 test:
 	$(PYTHON) -m pytest -q
+test-web:
+	$(NODE) --test tests/web/*.test.mjs
 check:
 	.venv/bin/ruff check mvgogo scripts tests
 	.venv/bin/ruff format --check mvgogo scripts tests
