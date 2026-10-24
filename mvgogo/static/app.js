@@ -50,11 +50,15 @@ const navigation=new AppHistory(history,applyNavigation);
 function formValues() {
   return {origin:$('origin').value,destination:$('destination').value,departure:$('departure').value,maxWalk:$('max-walk').value,maxBike:$('max-bike').value};
 }
+function syncClearButtons() {
+  for (const id of ['origin','destination']) $(`clear-${id}`).hidden=!$(id).value.length;
+}
 function fillForm(value) {
   if (!value) return;
   for (const [key,id] of [['origin','origin'],['destination','destination'],['departure','departure'],['maxWalk','max-walk'],['maxBike','max-bike']]) {
     if (typeof value[key] === 'string') $(id).value=value[key];
   }
+  syncClearButtons();
 }
 function saveTrip() {
   if (restoring) return;
@@ -76,6 +80,7 @@ function recordNavigation(replace=false) {
   saveTrip();
 }
 function syncLayout() {
+  syncClearButtons();
   const mapVisible=screen === 'map';
   document.body.dataset.mobileView=mapVisible ? 'map' : 'planner';
   document.body.dataset.screen=screen;
@@ -208,7 +213,9 @@ async function searchPlace(which) {
   finally { if (searches[which] === controller) delete searches[which]; }
 }
 for (const id of ['origin','destination']) {
-  $(id).addEventListener('input',()=>{ closeSearch(id); delete points[id]; cancelPending(); renderPointMarkers(); queueSave(); });
+  const edited=()=>{ closeSearch(id); delete points[id]; cancelPending(); renderPointMarkers(); syncClearButtons(); queueSave(); };
+  $(id).addEventListener('input',edited);
+  $(`clear-${id}`).onclick=()=>{ $(id).value=''; edited(); saveTrip(); $(id).focus({preventScroll:true}); };
   $(id).addEventListener('keydown',event=>{
     if (event.key === 'Enter') { event.preventDefault(); searchPlace(id); }
     if (event.key === 'Escape') closeSearch(id);

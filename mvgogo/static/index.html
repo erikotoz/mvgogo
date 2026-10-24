@@ -8,9 +8,9 @@
   <title>mvgogo — Transit meets bike sharing</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/vendor/leaflet.css">
-  <link rel="stylesheet" href="/static/style.css?v=20261023-3">
+  <link rel="stylesheet" href="/static/style.css?v=20261024-2">
   <script defer src="/static/vendor/leaflet.js"></script>
-  <script type="module" src="/static/app.js?v=20261024-1"></script>
+  <script type="module" src="/static/app.js?v=20261024-2"></script>
 </head>
 <body data-mobile-view="planner" data-screen="edit">
   <aside class="panel">
@@ -25,12 +25,12 @@
     <div class="intro"><span class="eyebrow">THE CITY, AT YOUR PACE</span><h1>Your route.<br><span>Your rules.</span></h1><p>Transit meets MyRadl. Find a better connection and take back your time.</p></div>
     <form id="trip-form">
       <div class="place-group">
-        <div class="point-field"><button type="button" class="point-button active" id="pick-origin" aria-label="Pick a starting point on the map">A</button><label for="origin">From<input id="origin" placeholder="Address, place or coordinates" required autocomplete="off" aria-controls="origin-results"></label><button type="button" class="search-place" id="search-origin" aria-label="Search for your starting point">Find</button></div>
+        <div class="point-field"><button type="button" class="point-button active" id="pick-origin" aria-label="Pick a starting point on the map">A</button><div class="place-entry"><label for="origin">From</label><div class="place-input"><input id="origin" placeholder="Address, place or coordinates" required autocomplete="off" aria-controls="origin-results"><button type="button" class="clear-place" id="clear-origin" aria-label="Clear starting point" hidden>×</button></div></div><button type="button" class="search-place" id="search-origin" aria-label="Search for your starting point">Find</button></div>
         <div id="origin-results" class="place-results" role="group" aria-label="Starting point search results" hidden></div>
         <div class="saved-shortcuts"><button type="button" data-use="home" data-field="origin">⌂ Home</button><button type="button" data-use="work" data-field="origin">▣ Work</button><button type="button" data-save="origin">Save place…</button></div>
       </div>
       <div class="place-group">
-        <div class="point-field"><button type="button" class="point-button" id="pick-destination" aria-label="Pick a destination on the map">B</button><label for="destination">To<input id="destination" placeholder="Address, place or coordinates" required autocomplete="off" aria-controls="destination-results"></label><button type="button" class="search-place" id="search-destination" aria-label="Search for your destination">Find</button></div>
+        <div class="point-field"><button type="button" class="point-button" id="pick-destination" aria-label="Pick a destination on the map">B</button><div class="place-entry"><label for="destination">To</label><div class="place-input"><input id="destination" placeholder="Address, place or coordinates" required autocomplete="off" aria-controls="destination-results"><button type="button" class="clear-place" id="clear-destination" aria-label="Clear destination" hidden>×</button></div></div><button type="button" class="search-place" id="search-destination" aria-label="Search for your destination">Find</button></div>
         <div id="destination-results" class="place-results" role="group" aria-label="Destination search results" hidden></div>
         <div class="saved-shortcuts"><button type="button" data-use="home" data-field="destination">⌂ Home</button><button type="button" data-use="work" data-field="destination">▣ Work</button><button type="button" data-save="destination">Save place…</button></div>
       </div>
