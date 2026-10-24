@@ -80,6 +80,12 @@ export function navigationState(value = {}) {
     picking: ['origin', 'destination'].includes(value.picking) ? value.picking : null,
   };
 }
+// An in-app arrow goes to its parent screen even in a newly reopened tab.
+// The browser's own Back button continues to follow chronological history.
+export function backDestination(screen, hasTrip) {
+  if (screen === 'trip') return 'edit';
+  return hasTrip ? 'trip' : 'edit';
+}
 export class AppHistory {
   constructor(history, apply) { this.history = history; this.apply = apply; }
   start(value, hasTrip) {

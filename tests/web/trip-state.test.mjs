@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {AppHistory, SESSION_KEY, decodeSession, googleMapsURL, readSession, writeSession} from '../../mvgogo/static/trip-state.mjs';
+import {AppHistory, SESSION_KEY, backDestination, decodeSession, googleMapsURL, readSession, writeSession} from '../../mvgogo/static/trip-state.mjs';
 
 const place = {name: 'Public stop', lat: 48.1, lon: 11.5};
 const route = {kind:'mixed', start_time:1000, end_time:2000, total_seconds:1, walk_seconds:0, bike_seconds:1, transfers:0,
@@ -76,4 +76,17 @@ test('a reopened station has Back layers for its map and saved trip', () => {
   assert.equal(applied.at(-1).screen,'map'); assert.equal(applied.at(-1).detail,null);
   nav.back(()=>assert.fail()); nav.pop(history.state);
   assert.equal(applied.at(-1).screen,'trip');
+});
+test('the in-app Back arrow opens the planner from a restored root trip', () => {
+  const history=browserHistory(),nav=new AppHistory(history,()=>{});
+  nav.start({screen:'trip'},true);
+  assert.equal(nav.current.depth,0);
+  nav.navigate({screen:backDestination(nav.current.screen,true)});
+  assert.equal(nav.current.screen,'edit');
+  assert.equal(backDestination('edit',true),'trip');
+});
+test('the map Back arrow returns to its parent rather than revisiting the previous map', () => {
+  assert.equal(backDestination('map',true),'trip');
+  assert.equal(backDestination('map',false),'edit');
+  assert.equal(backDestination('edit',false),'edit');
 });

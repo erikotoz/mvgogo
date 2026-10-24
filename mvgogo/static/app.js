@@ -1,4 +1,4 @@
-import {AppHistory, googleMapsURL, readSession, validPoint, writeSession} from './trip-state.mjs?v=20261023-3';
+import {AppHistory, backDestination, googleMapsURL, readSession, validPoint, writeSession} from './trip-state.mjs?v=20261024-1';
 
 const $ = id => document.getElementById(id);
 const panel = document.querySelector('.panel');
@@ -88,6 +88,7 @@ function syncLayout() {
   $('cancel-edit').hidden=!resultsData;
   $('edit-trip').hidden=!resultsData || screen === 'edit';
   $('app-back').hidden=!resultsData && screen === 'edit';
+  $('app-back').setAttribute('aria-label',screen === 'trip' ? 'Back to trip planner' : resultsData ? 'Return to saved trip' : 'Back to trip planner');
   $('view-planner').lastChild.textContent=resultsData ? 'Trip' : 'Plan';
   $('view-planner').setAttribute('aria-pressed',String(!mapVisible));
   $('view-map').setAttribute('aria-pressed',String(mapVisible));
@@ -124,11 +125,14 @@ function applyNavigation(value) {
 function goBack() {
   if ($('save-dialog').open) { $('save-dialog').close(); return; }
   if (!$('station-legend').hidden) { toggleLayers(false); return; }
-  navigation.back(()=>showScreen(resultsData ? 'trip' : 'edit',{replace:true}));
+  if (currentDetail) { closeDetail(); return; }
+  if (picking) { cancelPick(); return; }
+  showScreen(backDestination(screen,!!resultsData));
+  panel.scrollTop=0;
 }
 window.addEventListener('popstate',event=>navigation.pop(event.state));
 $('app-back').onclick=goBack;
-$('map-back').onclick=()=>{ if (navigation.current?.screen === 'map') goBack(); else showScreen(resultsData ? 'trip' : 'edit'); };
+$('map-back').onclick=goBack;
 $('brand-home').onclick=event=>{ event.preventDefault(); showScreen(resultsData ? 'trip' : 'edit'); panel.scrollTop=0; };
 $('view-planner').onclick=()=>showScreen(resultsData ? 'trip' : 'edit');
 $('view-map').onclick=()=>showScreen('map');

@@ -145,6 +145,9 @@ keeps that itinerary available through **Return to your trip**. Browser Back
 closes place details, then returns from the map to the trip; leaving the site
 does not erase its saved itinerary. The calculated time and an age notice help
 identify an old trip. Use **Refresh** to calculate routes for the current time.
+The in-app arrow has a fixed destination: trip to planner, map to trip, and
+planner back to the saved trip. It also works when a restored trip has no prior
+browser history; it never clears the saved itinerary.
 
 **Navigate in Google Maps** opens walking directions to the exact coordinates
 of a station or route stop. Each stop in the itinerary also has a direct link.
